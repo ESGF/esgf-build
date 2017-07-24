@@ -8,14 +8,19 @@ Readme doc for setting up build environment and optionally the rsync mirror.
    updateall.sh devel 
    ``` 
    * It also creates the taglist file, which you should check, to see if there are any commits after the last annotated tags.
-      ``` shell 
-      git log <yourlasttag>..HEAD 
-      ``` 
+    ``` shell 
+    git log <yourlasttag>..HEAD 
+    ``` 
 
 3. If any retagging is needed, do so. Remember to use annotated tags. 
-   * git tag -a '<version>' 'message'
-   * ex: git tag -a 'v1.3.22-centaur-release' 'for whatever release'
-
+   ``` shell 
+   git tag -a '<version>' 'message'
+   ```
+   * Example: 
+   ``` shell
+   git tag -a 'v1.3.22-centaur-release' 'for whatever release'
+   ```
+   
 4. Check paths to JAVA and PYTHON installation directories listed in buildall.sh. Use Sun Java 8 and Python 2.7
 
 5. Execute buildall.sh to build repos using Ant.  This builds all repos by default, which can be time consuming.  To build a subset of repos, pass the names of the repos as command line arguments.
