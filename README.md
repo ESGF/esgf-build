@@ -8,6 +8,9 @@ Readme doc for setting up build environment and optionally the rsync mirror.
    updateall.sh devel 
    ``` 
    * It also creates the taglist file, which you should check, to see if there are any commits after the last annotated tags.
+      ``` shell 
+      git log <yourlasttag>..HEAD 
+      ``` 
 
 3. If any retagging is needed, do so. Remember to use annotated tags. 
    * git tag -a '<version>' 'message'
