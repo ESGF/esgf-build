@@ -1,8 +1,8 @@
 Readme doc for setting up build environment and optionally the rsync mirror.
 # Build Steps
-1. Ensure that allrepos.txt and repo_list.txt is found and current.
+1. Ensure that ```allrepos.txt ``` and ```repo_list.txt``` is found and current.
 
-2. Execute updateall.sh passing the branch to be updated as a command line argument to sequentially checkout the latest commit from the selected branch of each repo.
+2. Execute ```updateall.sh``` passing the branch to be updated as a command line argument to sequentially checkout the latest commit from the selected branch of each repo.
    * Example: 
    ``` shell 
    updateall.sh devel 
@@ -40,7 +40,7 @@ At this point, you have the packaged tarballs in the esgf_tarballs directory. Th
 
 # Steps for extraction and upload to the dist-mirror 
 
-1. Execute create_local_mirror_directory.sh with the distribution type as the command line argument to extract your freshly built binaries.
+1. Execute ```create_local_mirror_directory.sh``` with the distribution type as the command line argument to extract your freshly built binaries.
 	* Example: 
 	``` shell
 	create_local_mirror_directory.sh [devel|master]
@@ -53,7 +53,12 @@ At this point, you have the packaged tarballs in the esgf_tarballs directory. Th
 	update-esgnode.sh devel
 	```
 
-3. Excute 'esgfupload.sh test' to check what files would be updated on coffee. Check in particular binary versions. Execute esgfupload.sh to push out the binaries to coffee. 
+3. Excute ```esgfupload.sh test``` to check what files would be updated on coffee. Check in particular binary versions. Execute esgfupload.sh to push out the binaries to coffee.
+	* Example:
+	``` shell
+	esgfupload.sh test  #performs dry-run
+	esgfupload.sh       #triggers update to distribution mirror
+	```
 	* Trigger a local mirror update, with esgfdist.sh, to verify that both your mirror and coffee are in perfect sync.
 
 Done!
