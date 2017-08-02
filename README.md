@@ -53,13 +53,14 @@ At this point, you have the packaged tarballs in the esgf_tarballs directory. Th
 	update-esgnode.sh devel
 	```
 
-3. Excute ```esgfupload.sh test``` to check what files would be updated on coffee. Check in particular binary versions. Execute esgfupload.sh to push out the binaries to coffee.
+3. Execute ```esgfupload.sh test``` to check what files would be updated on coffee. Check in particular binary versions. Execute esgfupload.sh to push out the binaries to coffee.
 	* Example:
 	``` shell
 	esgfupload.sh test  #performs dry-run
 	esgfupload.sh       #triggers update to distribution mirror
 	```
-	* Trigger a local mirror update, with esgfdist.sh, to verify that both your mirror and coffee are in perfect sync.
+
+4. Trigger a local mirror update, with ```esgfdist.sh```, to verify that both your mirror and the distrib-coffee mirror are in perfect sync.
 
 Done!
 
