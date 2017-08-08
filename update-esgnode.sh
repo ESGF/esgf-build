@@ -1,19 +1,29 @@
 #!/bin/bash
-script_version='v2.5.0-devel-release'
-#script_version='v2.4.24-master-release'
-script_release='Midgard'
-script_maj_version='2.5'
-devel=1
+source "$(dirname -- "$0")/script_version_attributes.sh"
+
+echo "script_maj_version: ${script_maj_version}"
+echo "script_version: ${script_version}"
+echo "script_release: ${script_release}"
+
+echo $(pwd)
+
 srcdir=./esgf-installer
 pushd $srcdir
-if [ $devel -eq 0 ]; then 
-	git checkout master;
-	else 
+
+if [[ $1 == "devel" ]]; then
+	active_branch='devel'
 	git checkout devel;
+elif [[ $1 == "master" ]]; then
+	active_branch='master'
+	git checkout master;
+else
+	echo "Must choose a branch for repos to update (Primarily devel or master)"
+	exit
 fi
 git pull
 git log|head -5
 popd
+
 ####Do not change below this line####
 replace_version='v2.0-RC5.4.0-devel'
 replace_release='Centaur'
@@ -22,16 +32,16 @@ quotedsv=`echo "$replace_version" | sed 's/[./*?|]/\\\\&/g'`;
 quotedsr=`echo "$replace_release" | sed 's/[./*?|]/\\\\&/g'`;
 quotedmj=`echo "$replace_script_maj_version" | sed 's/[./*?|]/\\\\&/g'`;
 
-if [ $devel -eq 1 ]; then
-	installerdir=/home/pchengi/esgf-work/dist-repos/prod/dist/devel/esgf-installer/$script_maj_version
-	lastpushdir=/home/pchengi/esgf-work/dist-repos/prod/dist/devel
+if [ $active_branch == "devel" ]; then
+	installerdir=$(pwd)/dist-repos/prod/dist/devel/esgf-installer/$script_maj_version
+	lastpushdir=$(pwd)/dist-repos/prod/dist/devel
 else
-	installerdir=/home/pchengi/esgf-work/dist-repos/prod/dist/esgf-installer/$script_maj_version
-	lastpushdir=/home/pchengi/esgf-work/dist-repos/prod/dist
+	installerdir=$(pwd)/dist-repos/prod/dist/esgf-installer/$script_maj_version
+	lastpushdir=$(pwd)/dist-repos/prod/dist
 fi
 cat $srcdir/esg-node|sed "s/\(script_version=\"$quotedsv\"\)/script_version=\"$script_version\"/" >$installerdir/esg-node; 
-sed -i "s/\(script_release=\"$quotedsr\"\)/script_release=\"$script_release\"/" $installerdir/esg-node;
-sed -i "s/\(script_maj_version=\"$quotedmj\"\)/script_maj_version=\"$script_maj_version\"/" $installerdir/esg-node;
+sed -i .backup "s/\(script_release=\"$quotedsr\"\)/script_release=\"$script_release\"/" $installerdir/esg-node;
+sed -i .backup "s/\(script_maj_version=\"$quotedmj\"\)/script_maj_version=\"$script_maj_version\"/" $installerdir/esg-node;
 cp $srcdir/esg-init $installerdir/esg-init
 cp $srcdir/setup-autoinstall $installerdir/setup-autoinstall
 allok=0

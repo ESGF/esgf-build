@@ -1,0 +1,12 @@
+esgf-dashboard
+esgf-desktop
+esgf-getcert
+esgf-idp
+esgf-installer
+esgf-node-manager
+esgf-publisher-resources
+esgf-security
+esg-orp
+esg-publisher 
+esg-search 
+esgf-stats-api
