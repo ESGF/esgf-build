@@ -78,7 +78,7 @@ for i in "${!components[@]}"; do
 	if [ "$i" = "esgf-installer" ]; then
 		echo "Found esgf-installer"
 		mkdir $script_maj_version;
-		mv esg-node* jar_security_scan* setup-autoinstall* esg-purge.sh* esg-init* esg-functions* esg-bootstrap* $script_maj_version/;
+		mv esg-node* jar_security_scan* setup-autoinstall* esg-purge.sh* esg-init* esg-functions* esg-bootstrap* esg-autoinstall* esg-autoinstall.template $script_maj_version/;
 	fi
 	tar -czf $i-dist.tgz *;
 	mv $i-dist.tgz ../esgf_tarballs
