@@ -27,6 +27,7 @@ for i in "${fulllist[@]}"; do
 	git describe; 
 	git describe>>../taglist;
 	echo
+	printf $"\n">>taglist;
 	echo "\n" >>taglist; 
 	cd ..
 done
