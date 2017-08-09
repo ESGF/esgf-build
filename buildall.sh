@@ -9,12 +9,14 @@ PYTHONDIR="$(dirname $(which python))"
 echo "PYTHONDIR: ${PYTHONDIR}"
 LOGDIR=$PWD/buildlogs
 
+mkdir -p LOGDIR
+
 export JAVA_HOME=$JAVADIR
-if ! echo $PATH|grep "$JAVADIR" >/dev/null; then 
+if ! echo $PATH|grep "$JAVADIR" >/dev/null; then
 	echo "Will prepend path with custom java";
 	export PATH=$JAVADIR:$PATH;
 fi
-if ! echo $PATH|grep "$PYTHONDIR" >/dev/null; then 
+if ! echo $PATH|grep "$PYTHONDIR" >/dev/null; then
 	echo "Will prepend path with custom python";
 	export PATH=$PYTHONDIR:$PATH;
 fi
