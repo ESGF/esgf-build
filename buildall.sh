@@ -57,9 +57,22 @@ for i in "${fulllist[@]}"; do
 		cd ..
 		continue;
 	fi
+
+	if [ "$i" = "esgf-stats-api" ]; then
+		#Makes call to clean_all target in the build.xml file; (Cleans out generatable artifacts)
+		$ANT clean_all 2>&1|tee $LOGDIR/$i-clean.log;
+		#Makes call to pull target in the build.xml file; Git clone ESGF Maven Repositories from Github
+		$ANT make_dist 2>&1|tee $LOGDIR/$i-build.log;
+		#Makes call to publish_local in the build.xml file; (publishes built artifacts to remote repository: https://github.com/ESGF/esgf-artifacts)
+	fi
+
+	#Makes call to clean_all target in the build.xml file; (Cleans out generatable artifacts)
 	$ANT clean_all 2>&1|tee $LOGDIR/$i-clean.log;
+	#Makes call to pull target in the build.xml file; Git clone ESGF Maven Repositories from Github
 	$ANT pull 2>&1|tee $LOGDIR/$i-pull.log;
+	#Makes call to make_dist in the build.xml file; (Creates full software distribution)
 	$ANT make_dist 2>&1|tee $LOGDIR/$i-build.log;
+	#Makes call to publish_local in the build.xml file; (publishes built artifacts to remote repository: https://github.com/ESGF/esgf-artifacts)
 	$ANT publish_local 2>&1|tee $LOGDIR/$i-publishlocal.log;
 	cd ..
 done
