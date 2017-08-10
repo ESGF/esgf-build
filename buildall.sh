@@ -2,14 +2,14 @@
 
 #check correctness of paths
 ANT=$(which ant)
-JAVA_BINARY="$(dirname $(which java))"
+JAVA_BINARY="$(dirname '$(which java)')"
 JAVADIR=${JAVA_BINARY%/*}
 echo "JAVA_DIR: ${JAVADIR}"
-PYTHONDIR="$(dirname $(which python))"
+PYTHONDIR="$(dirname '$(which python)')"
 echo "PYTHONDIR: ${PYTHONDIR}"
 LOGDIR=$PWD/buildlogs
 
-mkdir -p LOGDIR
+mkdir -p $LOGDIR
 
 export JAVA_HOME=$JAVADIR
 if ! echo $PATH|grep "$JAVADIR" >/dev/null; then
@@ -39,7 +39,7 @@ for i in "${fulllist[@]}"; do
 	echo -n >$LOGDIR/$i-pull.log
 	echo -n >$LOGDIR/$i-build.log
 	echo $i;
-	cd $i;
+	cd $i || exit;
 	if [ "$i" = "esgf-getcert" ]; then
 		$ANT clean 2>&1|tee $LOGDIR/$i-clean.log;
 		$ANT dist 2>&1|tee $LOGDIR/$i-build.log;
