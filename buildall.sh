@@ -38,7 +38,18 @@ for i in "${fulllist[@]}"; do
 	echo -n >$LOGDIR/$i-clean.log
 	echo -n >$LOGDIR/$i-pull.log
 	echo -n >$LOGDIR/$i-build.log
-	echo $i;
+
+	#Ignore directories without a build.xml file
+	if [ "$i" = "esgf-installer" ] || [ "$i" = "esgf-publisher-resources" ] || [ "$i" = "esgf-desktop" ]; then
+		continue;
+	fi
+
+	echo
+	echo "*******************************"
+	echo "Building  ${i}"
+	echo "*******************************"
+	echo
+
 	cd $i || exit;
 	if [ "$i" = "esgf-getcert" ]; then
 		$ANT clean 2>&1|tee $LOGDIR/$i-clean.log;
