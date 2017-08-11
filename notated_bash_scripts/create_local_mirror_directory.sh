@@ -14,7 +14,7 @@ dists[esgf-cog-dist.tgz]='esgf-cog'
 dists[filters-dist.tgz]='filters'
 dists[esgf-stats-api-dist.tgz]='esgf-stats-api'
 
-
+#CHECKS FOR THE ACTIVE BRANCH
 if [[ $1 == "devel" ]]; then
 	distribution_type='devel'
 elif [[ $1 == "master" ]]; then
@@ -25,7 +25,10 @@ else
 fi
 
 for i in "${!dists[@]}"; do
+	#TGTDIR IS THE TARBALL FOR EACH REPO
 	tgtdir=${dists[$i]};
+				#CHECKS FOR  EACH DIRECTORY (ADD DEVEL TO PATH IF active_branch)
+				#CREATE IF NOT FOUND
         if [ ! -d dist-repos/prod/dist/devel/$tgtdir/ ]; then
         	mkdir -p dist-repos/prod/dist/devel/$tgtdir/
         fi
@@ -33,21 +36,26 @@ for i in "${!dists[@]}"; do
                 mkdir -p dist-repos/prod/dist/$tgtdir/
         fi
 	if [ $distribution_type == "devel" ]; then
+		#COPIES SPECIFIC TARBALL DIRECTORY TO DIST-REPOS DIRECTORY
 		cp esgf_tarballs/$i dist-repos/prod/dist/devel/$tgtdir/;
+		#CHANGES DIRECTORY TO THE COPIED DIRECTORY
 		cd dist-repos/prod/dist/devel/$tgtdir;
-		echo "Extracting ${i} -> $(pwd)" 
+		echo "Extracting ${i} -> $(pwd)"
+		#UNTARS THE TARBALL THEN DELETES IT
 		tar -xvzf $i && rm -f $i;
 		echo
-	else 
+	else
 		cp esgf_tarballs/$i dist-repos/prod/dist/$tgtdir/;
 		cd dist-repos/prod/dist/$tgtdir;
 		echo "Extracting ${i} -> $(pwd)"
 		tar -xvzf $i && rm -f $i;
 		echo
 	fi
+	#FOR THE INSTALLER
 	if [ "$tgtdir" = "esgf-installer" ]; then
+		#?????????
 		mv esg-globus* ../externals/bootstrap/
 	fi
-	
-	cd - 
+
+	cd -
 done

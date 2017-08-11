@@ -5,10 +5,10 @@ from git import Repo
 import os
 import re
 
-#TODO: remove esgf installer from repo list when not on personal computer
+#TODO: do not pass esgf-installer when not on personal computer
 
 #Search for and remove appropriate repos
-for repo in repo_info.repo_list:
+for repo in repo_info.REPO_LIST:
     if repo == 'esgf-installer':
         continue
     try:
@@ -19,7 +19,7 @@ for repo in repo_info.repo_list:
         print( repo + " skipped.")
 
 
-for repo_url in repo_info.all_repo_urls:
+for repo_url in repo_info.ALL_REPO_URLS:
     #TODO: to make universal, allow user to enter the directory path to clone to
 
     ###In the future, if a module with more than 2 "-"s is created, this will
