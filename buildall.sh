@@ -2,10 +2,10 @@
 
 #check correctness of paths
 ANT=$(which ant)
-JAVA_BINARY="$(dirname '$(which java)')"
+JAVA_BINARY="$(dirname $(which java))"
 JAVADIR=${JAVA_BINARY%/*}
 echo "JAVA_DIR: ${JAVADIR}"
-PYTHONDIR="$(dirname '$(which python)')"
+PYTHONDIR="$(dirname $(which python))"
 echo "PYTHONDIR: ${PYTHONDIR}"
 LOGDIR=$PWD/buildlogs
 
@@ -39,8 +39,19 @@ for i in "${fulllist[@]}"; do
 	echo -n >$LOGDIR/$i-pull.log
 	echo -n >$LOGDIR/$i-build.log
 
+
+	#Timing without building esgf-desktop
+	#real	9m34.689s
+	#user	2m34.351s
+	#sys	0m13.850s
+
+	#Timing with building esgf-desktop
+	# real	16m27.802s
+	# user	2m53.092s
+	# sys	0m16.969s
+
 	#Ignore directories without a build.xml file
-	if [ "$i" = "esgf-installer" ] || [ "$i" = "esgf-publisher-resources" ] || [ "$i" = "esgf-desktop" ]; then
+	if [ "$i" = "esgf-installer" ] || [ "$i" = "esgf-publisher-resources" ] || [ "$i" = "esgf-desktop" ] || [ "$i" = "esg-publisher" ]; then
 		continue;
 	fi
 
@@ -51,6 +62,7 @@ for i in "${fulllist[@]}"; do
 	echo
 
 	cd $i || exit;
+
 	if [ "$i" = "esgf-getcert" ]; then
 		$ANT clean 2>&1|tee $LOGDIR/$i-clean.log;
 		$ANT dist 2>&1|tee $LOGDIR/$i-build.log;
@@ -64,6 +76,8 @@ for i in "${fulllist[@]}"; do
 		#Makes call to pull target in the build.xml file; Git clone ESGF Maven Repositories from Github
 		$ANT make_dist 2>&1|tee $LOGDIR/$i-build.log;
 		#Makes call to publish_local in the build.xml file; (publishes built artifacts to remote repository: https://github.com/ESGF/esgf-artifacts)
+		cd ..
+		continue;
 	fi
 
 	#Makes call to clean_all target in the build.xml file; (Cleans out generatable artifacts)
@@ -79,3 +93,6 @@ done
 
 #Logs out the build result of all of the repos
 grep -R "BUILD" buildlogs/esg*-*-build.log
+
+
+grep -R "Total time" buildlogs/esg*-*-build.log
