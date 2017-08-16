@@ -9,3 +9,4 @@ https://github.com/ESGF/esgf-security.git
 https://github.com/ESGF/esg-orp.git
 https://github.com/ESGF/esg-publisher.git
 https://github.com/ESGF/esg-search.git
+https://github.com/ESGF/esgf-stats-api.git

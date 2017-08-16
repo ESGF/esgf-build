@@ -19,3 +19,6 @@ legacy/
 taglist
 taglist-devel
 taglist-master
+.DS_Store
+"<git.Repo \"/"
+repo_info.pyc
