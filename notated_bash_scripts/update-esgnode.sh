@@ -23,6 +23,7 @@ else
 	exit
 fi
 git pull
+#shows the most recent commit message (head shows top message, -5 shows first 5 lines)
 git log|head -5
 popd
 

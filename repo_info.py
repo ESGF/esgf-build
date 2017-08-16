@@ -1,7 +1,14 @@
-#SCRIPT DEFAULT INFO
-SCRIPT_MAJOR_VERSION = '2.5'
-SCRIPT_RELEASE = 'Midgard'
-SCRIPT_VERSION = 'v2.5.8-master-release'
+'''    '''
+# SCRIPT DEFAULT INFO
+# SCRIPT_MAJOR_VERSION = '2.5'
+# SCRIPT_RELEASE = 'Midgard'
+# SCRIPT_VERSION = 'v2.5.8-master-release'
+
+SCRIPT_INFO = {'script_major_version': '2.5',
+               'script_release': 'Midgard',
+               'script_version': 'v2.5.8-master-release'}
+
+REPOS_TO_EXCLUDE = ['esgf-installer', 'esgf-publisher-resources', 'esg-publisher', 'esgf-desktop']
 
 ALL_REPO_URLS = [
     'https://github.com/ESGF/esgf-dashboard.git',

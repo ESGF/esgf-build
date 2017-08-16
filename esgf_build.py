@@ -9,10 +9,12 @@ import errno
 from distutils.spawn import find_executable
 import tarfile
 import mmap
+import hashlib
 from git import Repo
 import repo_info
 
-#TODO: create a list of repos to exclude from building
+#MJ - 16 min w/ desktop
+#   - 9 min w/o
 
 def update_all(active_branch, starting_directory):
     '''Checks each repo in the REPO_LIST for the most updated branch '''
@@ -58,12 +60,6 @@ def build_all(build_list, starting_directory):
     for repo in build_list:
         #TODO: add loading bar while ant runs?
         #TODO: include installer in build script for final version
-        if repo == 'esgf-installer':
-            continue
-        if repo == 'esgf-publisher-resources':
-            continue
-        if repo == 'esg-publisher':
-            continue
         print "Building repo: " + repo
         #the directory is changed to the repo directory
         #in order to call ant on the build.xml file in the directory
@@ -118,22 +114,20 @@ def build_all(build_list, starting_directory):
             if mmap_object.find('BUILD') != -1:
                 return log
 
-def create_esgf_tarballs(starting_directory, build_list):
-    #TODO: how should I be using the dists that were created?
-    ##### is adding the repos to the tarball correct?
-    ##### or should i be using something from build func?
-    #creating a directory to save the tarballs to
-    #import pdb; pdb.set_trace()
+    #TODO: also print total time that each one took.
 
+    #TODO remove ivy.xml directory????
+
+def create_esgf_tarballs(starting_directory, build_list):
+    '''create_esgf_tarballs using tarfile'''
     tarball_dir = starting_directory + "/esgf_tarballs"
     print "Attempting to remove old tarballs."
     try:
         shutil.rmtree(tarball_dir)
-        print "Old tarballs removed, beginning to create tarballs."
-    except:
-        print "No old tarballs located, beginning to create tarballs."
+        print "Old tarballs removed, beginning to create tarballs.\n"
+    except OSError:
+        print "No old tarballs located, beginning to create tarballs.\n"
     os.makedirs(tarball_dir)
-    #TODO: pass in the build_list to only build tarballs for specified repos
     for repo in build_list:
         #each tarball will have it's own directory in the main tarball directory
         local_tarball_dir = os.path.join(tarball_dir, repo)
@@ -149,52 +143,67 @@ def create_esgf_tarballs(starting_directory, build_list):
         print repo + " tarball created."
         os.chdir("..")
 
-def create_local_mirror_directory(active_branch, starting_directory):
+def create_local_mirror_directory(active_branch):
     '''Creates a directory for binaries and untars to it'''
     #if active_branch is devel then copy to dist folder for devel
     #if active_branch is master then copy to dist folder
     #untar in dist and delete tarballs
-    print "Creating local mirrror directory."
-    #TODO: realpath stuff
+    print "\nCreating local mirrror directory."
+    #dist-repos -> esgf_bin
     mkdir_p('../esgf_bin')
     os.chdir('esgf_tarballs')
     #goes to each tarball listed in the tarballs directory
     for tarball in os.listdir(os.getcwd()):
+        #this is used to name each repo in esgf_bin
+        trgt_dir = tarball.split(".")[0]
+        mkdir_p('esgf_bin/prod/dist/devel/{tgt_dir}'.format(tgt_dir=trgt_dir))
+        mkdir_p('esgf_bin/prod/dist/{tgt_dir}'.format(tgt_dir=trgt_dir))
         tar = tarfile.open(tarball)
-        tar.extractall(path="../esgf_bin")
+        if active_branch == 'devel':
+            tar.extractall(path="../esgf_bin/prod/dist/devel/{tgt_dir}".format(tgt_dir=trgt_dir))
+        else:
+            tar.extractall(path="../esgf_bin/prod/dist/{tgt_dir}".format(tgt_dir=trgt_dir))
         tar.close()
-    print "Tarballs extracted to directory."
+    print "Tarballs extracted to directory.\n"
 
-def update_esg_node(active_branch, starting_directory, script_major_version,
-                    script_release, script_version):
-    srcdir = 'esgf-installer'
+def update_esg_node(active_branch, starting_directory, script_settings_local):
+    '''Updates information in esg-node file'''
+    os.chdir("../esgf_installer")
+    src_dir = os.getcwd()
+
+    repo_handle = Repo(os.getcwd())
+    #changes to the active branch using checkout
+    repo_handle.git.checkout(active_branch)
+    repo_handle.remotes.origin.pull()
+
+    get_most_recent_commit(repo_handle)
 
     if active_branch == 'devel':
-        installerdir = (starting_directory
-                        +'/dist-repos/prod/dist/devel/esgf-installer/'
-                        + script_major_version)
+        installer_dir = (starting_directory
+                         +'/esgf_bin/prod/dist/devel/esgf-installer/'
+                         + script_settings_local['script_major_version'])
     else:
-        installerdir = (starting_directory
-                        + '/dist-repos/prod/dist/esgf-installer/'
-                        + script_major_version)
-    #TODO: use script info here to update node w/ proper info
-    #set installer directory and last push directory depending on it (???)
+        installer_dir = (starting_directory
+                         + '/esgf_bin/prod/dist/esgf-installer/'
+                         + script_settings_local['script_major_version'])
 
-    ########
-    #starting_directory.git.checkout(active_branch)
+    #TODO: in the future, remove script_settings from esg-node
+    replace_script_maj_version = '2.0'
+    replace_release = 'Centaur'
+    replace_version = 'v2.0-RC5.4.0-devel'
 
-    #starting_directory.remotes.origin.pull()
-    ########
+    print "Updating node with script versions."
+    replace_string_in_file('esg-node', replace_script_maj_version,
+                           script_settings_local['script_major_version'])
+    replace_string_in_file('esg-node', replace_release, script_settings_local['script_release'])
+    replace_string_in_file('esg-node', replace_version, script_settings_local['script_version'])
 
-    #####TODO: use index @ -1 to find the last element of a list
+    print "Copying esg-init and auto-installer."
+    #TODO: copy auto-installer and esg-init from source directory to installer directory
+    shutil.copytree(src_dir + "/esg-init", installer_dir + "/esg-init")
+    shutil.copytree(src_dir + "/setup-autoinstall", installer_dir + "/setup-autoinstall")
 
-
-    #set source directory and installer directory
-    #active_branch is devel or master
-    #replace old node references to past versions/release/etc to updated ones
-    #use md5 to make sure the right thing is being downloaded
-
-    pass
+    #TODO: use md5 to make sure the right thing is being downloaded
 
 def esgf_upload():
     #use rsync to upload
@@ -217,19 +226,98 @@ def mkdir_p(path, mode=0777):
     except OSError as exc:  # Python >2.5
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             print "{path} already exists".format(path=path)
-            pass
         else:
             raise
 
+def replace_string_in_file(file_name, original_string, new_string):
+    '''Goes into a file and replaces string'''
+    with open(file_name, 'r') as file_handle:
+        filedata = file_handle.read()
+    filedata = filedata.replace(original_string, new_string)
+
+    # Write the file out again
+    with open(file_name, 'w') as file_handle:
+        file_handle.write(filedata)
+
+def create_build_list(build_list, select_repo, all_repos_opt):
+    '''Creates a list of repos to build depending on a menu that the user picks from'''
+
+    #If the user has indicated that all repos should be built, then the repos
+    #from the repo list in repo info is purged of exclusions and set as the build_list
+    if all_repos_opt is True:
+        build_list = repo_info.REPO_LIST
+        for repo in build_list:
+            if repo in repo_info.REPOS_TO_EXCLUDE:
+                print "EXCLUSION FOUND: " + repo
+                build_list.remove(repo)
+                continue
+        print "Building repos: " + str(build_list)
+        print "\n"
+        return
+
+    #If the user has selcted the repos to build, the indexes are used to select
+    #the repo names from the menu , any selected repos on the exclusion list are
+    #purged, and the rest are appened to the build_list
+    select_repo = select_repo.split(',')
+    select_repo = map(int, select_repo)
+    for repo_num in select_repo:
+        repo_name = repo_info.REPO_LIST[repo_num]
+
+        if repo_name in repo_info.REPOS_TO_EXCLUDE:
+            print "EXCLUSION FOUND: " + repo_name
+            continue
+        else:
+            build_list.append(repo_name)
+    if not build_list:
+        print "No applicable repos selected."
+        exit()
+    else:
+        print "Building repos: " + str(build_list)
+        print "\n"
+
+def set_script_settings(default_script_q, script_settings_local):
+    '''Sets the script settings depending on input or default'''
+    if default_script_q.lower() not in ['y', 'yes', '']:
+        script_settings_local['script_major_version'] = raw_input("Please set the"
+                                                                  +" script_major_version: ")
+        script_settings_local['script_release'] = raw_input("Please set the script_release: ")
+        script_settings_local['script_version'] = raw_input("Please set the script version: ")
+    else:
+        print "Using default script settings."
+        script_settings_local = repo_info.SCRIPT_INFO.copy()
+    print "Script settings set.\n"
+
+def get_path_to_repos(starting_directory):
+    '''Checks the path provided to the repos to see if it exists'''
+    if os.path.isdir(os.path.realpath(starting_directory)):
+        starting_directory = os.path.realpath(starting_directory)
+        return False
+    create_path_q = raw_input("The path does not exist. Do you want "
+                              + starting_directory
+                              + " to be created? (Y or YES)")
+    if create_path_q.lower() not in ["yes", "y"]:
+        print "Not a valid response. Directory not created."
+        return True
+    os.makedirs(starting_directory)
+    starting_directory = os.path.realpath(starting_directory)
+    return False
+
+def get_most_recent_commit(repo_handle):
+    '''Gets the most recent commit w/ log and list comprehension'''
+    repo_handle.git.log()
+    mst_rcnt_cmmt = repo_handle.git.log().split("\ncommit")[0]
+    return mst_rcnt_cmmt
+
 def main():
-    '''User prompted for build specifications '''
+    '''User prompted for build specifications and functions for build are called'''
     build_list = []
+    select_repo = []
+    script_settings_local = {}
     #Use a raw_input statement to ask the user if they want to update devel or master
     #The user's answer will set the active_branch variable; must either be devel or master
     while True:
         active_branch = raw_input("Do you want to update devel or master branch? ")
 
-        #Run the update_all(active_branch) function, passing in active_branch as an argument
         if active_branch.lower() not in ["devel", "master"]:
             print "Please choose either master or devel."
             continue
@@ -238,95 +326,53 @@ def main():
 
     while True:
         #check if the directory exists, if not build it then get absolute path
-        starting_directory = raw_input("Please provide the path to the"
+        starting_directory = raw_input("Please provide the path to the" +
                                        " repositories on your system: ").strip()
-        if os.path.isdir(os.path.realpath(starting_directory)):
-            starting_directory = os.path.realpath(starting_directory)
+        if not get_path_to_repos(starting_directory):
             break
-        else:
-            create_path_q = raw_input("The path does not exist. Do you want "
-                                      + starting_directory
-                                      + " to be created? (Y or YES)")
-            if create_path_q.lower() not in ["yes", "y"]:
-                print "Not a valid response. Directory not created."
-                continue
-            else:
-                os.makedirs(starting_directory)
-                starting_directory = os.path.realpath(starting_directory)
-                break
 
     update_all(active_branch, starting_directory)
 
-    #Use a raw_input statement to ask which repos should be built;
-    #this will set the build_list variable; If the user enters nothing,
-    #assume all repos will be built
-    #list a menu to select repos to build
+    #Use a raw_input statement to ask which repos should be built, then call
+    #the create_build_list with all_repos_opt set to either True or False
     print repo_info.REPO_MENU
     while True:
-        #user selects what repos they want built
         select_repo = raw_input("Which repositories will be built? (Hit [Enter] for all) ")
-        #if the user does not enter anything, ask about build all
         if not select_repo:
             all_repo_q = raw_input("Do you want to build all repositories? (Y or YES) ")
-            #if they do not say yes, ask them again which repos will be built
-            if all_repo_q.lower() not in ["yes", "y"]:
+            if all_repo_q.lower() not in ["yes", "y", ""]:
                 print "Not a valid response."
                 continue
-            #if they do say yes then the build list is all the repos
             else:
-                build_list = repo_info.REPO_LIST
+                create_build_list(build_list, select_repo, all_repos_opt=True)
                 break
-        #if the user does enter something, convert to list of ints
         else:
             try:
-                select_repo = select_repo.split(',')
-                select_repo = map(int, select_repo)
-                try:
-                    for repo in select_repo:
-                        #append the menu items based on the number selected
-                        build_list.append(repo_info.REPO_LIST[repo])
-                    break
-                #if append fails then a value not in index
-                except IndexError:
-                    print "Invalid entry, please enter repos to build."
-                    continue
-            #if mapping fails, then an incorrect value must have been entered
-            except ValueError:
+                create_build_list(build_list, select_repo, all_repos_opt=False)
+                break
+            except (ValueError, IndexError):
                 print "Invalid entry, please enter repos to build."
                 continue
-    build_all(build_list, starting_directory)
 
-    #Use a raw_input statement to ask the user to set the script_major_version, script_release, and
-    #script_version
-    #print the
-    #TODO: develop an option to go back to using default settings
+    #Ask the user if they want to use default script settings, if yes call the
+    #set_script_settings function
     print ("Default Script Settings: \n"
-           + 'SCRIPT_MAJOR_VERSION = ' + repo_info.SCRIPT_MAJOR_VERSION + "\n"
-           + 'SCRIPT_RELEASE = ' + repo_info.SCRIPT_RELEASE + "\n"
-           + 'SCRIPT_VERSION = ' + repo_info.SCRIPT_VERSION)
+           + 'SCRIPT_MAJOR_VERSION = ' + repo_info.SCRIPT_INFO['script_major_version'] + "\n"
+           + 'SCRIPT_RELEASE = ' + repo_info.SCRIPT_INFO['script_release'] + "\n"
+           + 'SCRIPT_VERSION = ' + repo_info.SCRIPT_INFO['script_version'])
 
     default_script_q = raw_input("\nDo you want to use the default script settings? (Y or YES): ")
-    if default_script_q.lower() not in ['y', 'yes', '\n']:
-        script_major_version = raw_input("Please set the script_major_version: ")
-        script_release = raw_input("Please set the script_release: ")
-        script_version = raw_input("Please set the script version: ")
-    else:
-        print "Using default script settings."
-        script_major_version = repo_info.SCRIPT_MAJOR_VERSION
-        script_release = repo_info.SCRIPT_RELEASE
-        script_version = repo_info.SCRIPT_VERSION
+    set_script_settings(default_script_q, script_settings_local)
 
-    print "Script settings set.\n"
-    #execute the create_esgf_tarballs() function
+    build_all(build_list, starting_directory)
+
     create_esgf_tarballs(starting_directory, build_list)
 
-    #execute the create_local_mirror_directory(active_branch), passing in
-    #active_branch as an argument
-    create_local_mirror_directory(active_branch, starting_directory)
-    #execute update_esg_node(active_branch), passing in active_branch as an argument
-    #update_esg_node(active_branch, starting_directory, script_major_version
-    #                , script_release, script_version)
-    #execute esgf_upload()
+    create_local_mirror_directory(active_branch)
+
+    update_esg_node(active_branch, starting_directory, script_settings_local)
+
+    #esgf_upload()
 
 if __name__ == '__main__':
     main()
