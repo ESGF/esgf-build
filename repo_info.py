@@ -39,7 +39,21 @@ REPO_LIST = [
     'esg-search',
     'esgf-stats-api'
 ]
-#
+########################################################################
+#last minute solution for "esgf-installer" does not exist problem
+#this list creates all local mirrors and tarballs, but does not build all
+CREATE_DIRECTORY_LIST = [
+    'esgf-dashboard',
+    'esgf-getcert',
+    'esgf-idp',
+    'esgf-installer',
+    'esgf-node-manager',
+    'esgf-security',
+    'esg-orp',
+    'esg-search',
+    'esgf-stats-api'
+]
+#########################################################################
 REPO_MENU = 'Repository menu:\n'\
 '----------------------------------------\n'\
 '0: esgf-dashboard\n'\

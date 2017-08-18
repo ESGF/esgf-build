@@ -4,6 +4,7 @@
     * Purge and clone script can be used to purge any existing repositories, and
 clone new ones.
     * In the terminal, typing pwd in the directory of repositories will return the path.
+    * Remove past esgf_bin and esgf_tarballs directories.
 2. Dependencies installed:
     * Python 2.7
     * Apache Ant
@@ -36,4 +37,10 @@ clone new ones.
 COMING SOON
 ------------
 9. Node will be updated with script settings and binaries to upload are validated.
+(In progress)
 10. Upload to coffee server.
+(In progress)
+
+IMPORTANT
+-------------
+* Currently, esgf_bin and esgf_tarballs must be removed between builds to avoid a permission denied error.
