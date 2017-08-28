@@ -17,17 +17,21 @@ echo "active_branch: ${active_branch}"
 echo
 
 echo -n >taglist;
+echo -n >commits_since_last_tag.txt;
 for i in "${fulllist[@]}"; do
 	echo $i;
 	echo $i >>taglist;
 	echo "----------------------------" >>taglist;
-	cd $i;
+	cd $i || return;
 	git checkout $active_branch;
 	git pull --tags;
-	git describe; 
+	#list the commits since the last tag
+	last_tag=$(git describe)
+	git log $last_tag..HEAD>>../commits_since_last_tag.txt;
+	git describe;
 	git describe>>../taglist;
 	echo
 	printf $"\n">>taglist;
-	echo "\n" >>taglist; 
+	echo "\n" >>taglist;
 	cd ..
 done
