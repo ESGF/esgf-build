@@ -81,7 +81,7 @@ for i in "${fulllist[@]}"; do
 	fi
 
 	#Makes call to clean_all target in the build.xml file; (Cleans out generatable artifacts)
-	$ANT clean_all 2>&1|tee $LOGDIR/$i-clean.log;
+	# $ANT clean_all 2>&1|tee $LOGDIR/$i-clean.log;
 	#Makes call to pull target in the build.xml file; Git clone ESGF Maven Repositories from Github
 	$ANT pull 2>&1|tee $LOGDIR/$i-pull.log;
 	#Makes call to make_dist in the build.xml file; (Creates full software distribution)
@@ -91,8 +91,23 @@ for i in "${fulllist[@]}"; do
 	cd ..
 done
 
+#Time on home network
+# real	11m21.220s
+# user	4m18.649s
+# sys	0m23.005s
+
 #Logs out the build result of all of the repos
+echo "Build Logs"
 grep -R "BUILD" buildlogs/esg*-*-build.log
+echo "---------------\n"
+
+echo "Pull logs"
+grep -R "BUILD" buildlogs/esg*-*-pull.log
+echo "---------------\n"
+
+echo "Publish logs"
+grep -R "BUILD" buildlogs/esg*-*-publishlocal.log
+echo "---------------\n"
 
 
 grep -R "Total time" buildlogs/esg*-*-build.log
