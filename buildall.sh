@@ -86,8 +86,8 @@ for i in "${fulllist[@]}"; do
 	$ANT pull 2>&1|tee $LOGDIR/$i-pull.log;
 	#Makes call to make_dist in the build.xml file; (Creates full software distribution)
 	$ANT make_dist 2>&1|tee $LOGDIR/$i-build.log;
-	#Makes call to publish_local in the build.xml file; (publishes built artifacts to remote repository: https://github.com/ESGF/esgf-artifacts)
-	$ANT publish_local 2>&1|tee $LOGDIR/$i-publishlocal.log;
+	# #Makes call to publish in the build.xml file; (publishes built artifacts to remote repository: https://github.com/ESGF/esgf-artifacts)
+	$ANT publish 2>&1|tee $LOGDIR/$i-publish_remote.log;
 	cd ..
 done
 
@@ -99,15 +99,22 @@ done
 #Logs out the build result of all of the repos
 echo "Build Logs"
 grep -R "BUILD" buildlogs/esg*-*-build.log
-echo "---------------\n"
+echo "---------------"
+echo
 
 echo "Pull logs"
 grep -R "BUILD" buildlogs/esg*-*-pull.log
-echo "---------------\n"
+echo "---------------"
+echo
 
-echo "Publish logs"
+echo "Publish_local logs"
 grep -R "BUILD" buildlogs/esg*-*-publishlocal.log
-echo "---------------\n"
+echo "---------------"
+echo
 
+echo "Publish_remote logs"
+grep -R "BUILD" buildlogs/esg*-*-publish_remote.log
+echo "---------------"
+echo
 
 grep -R "Total time" buildlogs/esg*-*-build.log
