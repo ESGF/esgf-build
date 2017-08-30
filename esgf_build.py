@@ -38,12 +38,14 @@ def update_all(active_branch, repo_directory):
     taglist to track versions '''
     print "Beginning to update directories."
 
-    fileobject = open(os.path.join(repo_directory, "taglist.txt"), "w")
+    taglist_file = open(os.path.join(repo_directory, "taglist.txt"), "w")
+    commits_since_last_tag = open(os.path.join(repo_directory, "commits_since_last_tag.txt"), "w")
+
     for repo in repo_info.REPO_LIST:
         try:
             os.chdir(repo_directory + "/" + repo)
         except OSError:
-            print "Directory does not exist"
+            print "Directory for {repo} does not exist".format(repo=repo)
 
         repo_handle = Repo(os.getcwd())
         print "Checkout {repo}'s {active_branch} branch".format(repo=repo, active_branch=active_branch)
@@ -58,10 +60,17 @@ def update_all(active_branch, repo_directory):
         new_tag_list = list(tag_list)
         new_tag_list.reverse()
         latest_tag = str(new_tag_list[0])
-        fileobject.write(latest_tag)
+        taglist_file.write(latest_tag)
+
+        commits_since_tag = subprocess.check_output(shlex.split("git log {latest_tag}..HEAD".format(latest_tag=latest_tag)))
+        if commits_since_tag:
+            print "There are new commits since the last annotated tag for {repo}".format(repo=repo)
+            commits_since_last_tag.write(commits_since_tag)
 
         os.chdir("..")
-    fileobject.close()
+
+    taglist_file.close()
+    commits_since_last_tag.close()
     print "Directory updates complete."
 
 def build_all(build_list, starting_directory):
