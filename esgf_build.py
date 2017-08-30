@@ -33,6 +33,14 @@ class ProgressPrinter(RemoteProgress):
     def update(self, op_code, cur_count, max_count=None, message=''):
         print op_code, cur_count, max_count, cur_count / (max_count or 100.0), message or "NO MESSAGE"
 
+def get_latest_tag(repo):
+    '''accepts a GitPython Repo object and returns the latest annotated tag '''
+    #provides all the tags, reverses them (so that you can get the latest
+    #tag) and then takes only the first from the list
+    tag_list = repo.tags
+    latest_tag = str(tag_list[-1])
+    return latest_tag
+
 def update_all(active_branch, repo_directory):
     '''Checks each repo in the REPO_LIST for the most updated branch, and uses
     taglist to track versions '''
@@ -54,12 +62,7 @@ def update_all(active_branch, repo_directory):
         repo_handle.remotes.origin.pull("{active_branch}:{active_branch}".format(active_branch=active_branch),progress=progress_printer)
         print "Updating: " + repo
 
-        #provides all the tags, reverses them (so that you can get the latest
-        #tag) and then takes only the first from the list
-        tag_list = repo_handle.tags
-        new_tag_list = list(tag_list)
-        new_tag_list.reverse()
-        latest_tag = str(new_tag_list[0])
+        latest_tag = get_latest_tag(repo_handle)
 
         taglist_file.write("-------------------------\n")
         taglist_file.write(repo + "\n")
