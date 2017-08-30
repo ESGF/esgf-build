@@ -41,6 +41,15 @@ def get_latest_tag(repo):
     latest_tag = str(tag_list[-1])
     return latest_tag
 
+
+def update_repo(repo_name, repo_object, active_branch):
+    ''' accepts a GitPython Repo object and updates the specified branch '''
+    print "Checkout {repo_name}'s {active_branch} branch".format(repo_name=repo_name, active_branch=active_branch)
+    repo_object.git.checkout(active_branch)
+    progress_printer = ProgressPrinter()
+    repo_object.remotes.origin.pull("{active_branch}:{active_branch}".format(active_branch=active_branch),progress=progress_printer)
+    print "Updating: " + repo_name
+
 def update_all(active_branch, repo_directory):
     '''Checks each repo in the REPO_LIST for the most updated branch, and uses
     taglist to track versions '''
@@ -56,11 +65,7 @@ def update_all(active_branch, repo_directory):
             print "Directory for {repo} does not exist".format(repo=repo)
 
         repo_handle = Repo(os.getcwd())
-        print "Checkout {repo}'s {active_branch} branch".format(repo=repo, active_branch=active_branch)
-        repo_handle.git.checkout(active_branch)
-        progress_printer = ProgressPrinter()
-        repo_handle.remotes.origin.pull("{active_branch}:{active_branch}".format(active_branch=active_branch),progress=progress_printer)
-        print "Updating: " + repo
+        update_repo(repo, repo_handle, active_branch)
 
         latest_tag = get_latest_tag(repo_handle)
 
