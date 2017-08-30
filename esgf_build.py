@@ -60,12 +60,21 @@ def update_all(active_branch, repo_directory):
         new_tag_list = list(tag_list)
         new_tag_list.reverse()
         latest_tag = str(new_tag_list[0])
-        taglist_file.write(latest_tag)
+
+        taglist_file.write("-------------------------\n")
+        taglist_file.write(repo + "\n")
+        taglist_file.write("-------------------------\n")
+        taglist_file.write(latest_tag + "\n")
+        taglist_file.write("\n")
 
         commits_since_tag = subprocess.check_output(shlex.split("git log {latest_tag}..HEAD".format(latest_tag=latest_tag)))
         if commits_since_tag:
             print "There are new commits since the last annotated tag for {repo}".format(repo=repo)
-            commits_since_last_tag.write(commits_since_tag)
+            print "See {commits_file} for more details"
+            commits_since_last_tag.write("-------------------------\n")
+            commits_since_last_tag.write("Commits since last tag ({latest_tag}) for {repo}".format(latest_tag=latest_tag, repo=repo) + "\n")
+            commits_since_last_tag.write("-------------------------\n")
+            commits_since_last_tag.write(commits_since_tag + "\n")
 
         os.chdir("..")
 
