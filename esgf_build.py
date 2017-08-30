@@ -26,20 +26,32 @@ import repo_info
 # esgf_upload remains un-tested and is a direct copy of the bash script
 #into a subprocess.
 
-def update_all(active_branch, starting_directory):
+
+from git import RemoteProgress
+
+class ProgressPrinter(RemoteProgress):
+    def update(self, op_code, cur_count, max_count=None, message=''):
+        print op_code, cur_count, max_count, cur_count / (max_count or 100.0), message or "NO MESSAGE"
+
+def update_all(active_branch, repo_directory):
     '''Checks each repo in the REPO_LIST for the most updated branch, and uses
     taglist to track versions '''
     print "Beginning to update directories."
-    fileobject = open("taglist", "w")
+
+    fileobject = open(os.path.join(repo_directory, "taglist.txt"), "w")
     for repo in repo_info.REPO_LIST:
         try:
-            os.chdir(starting_directory + "/" + repo)
+            os.chdir(repo_directory + "/" + repo)
         except OSError:
             print "Directory does not exist"
+
         repo_handle = Repo(os.getcwd())
+        print "Checkout {repo}'s {active_branch} branch".format(repo=repo, active_branch=active_branch)
         repo_handle.git.checkout(active_branch)
-        repo_handle.remotes.origin.pull()
+        progress_printer = ProgressPrinter()
+        repo_handle.remotes.origin.pull("{active_branch}:{active_branch}".format(active_branch=active_branch),progress=progress_printer)
         print "Updating: " + repo
+
         #provides all the tags, reverses them (so that you can get the latest
         #tag) and then takes only the first from the list
         tag_list = repo_handle.tags
@@ -47,6 +59,7 @@ def update_all(active_branch, starting_directory):
         new_tag_list.reverse()
         latest_tag = str(new_tag_list[0])
         fileobject.write(latest_tag)
+
         os.chdir("..")
     fileobject.close()
     print "Directory updates complete."
