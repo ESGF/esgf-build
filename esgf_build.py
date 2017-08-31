@@ -154,9 +154,20 @@ def build_all(build_list, starting_directory):
             if mmap_object.find('BUILD') != -1:
                 return log
 
+
+def copy_artifacts_to_local_mirror(esgf_artifact_directory):
+    ''' The web artifacts (jars and wars) get placed at
+    ~/.ivy2/local/esgf-artifacts/ after running the ant builds. This function
+    copies them to the local mirror'''
+    local_artifacts_directory = os.path.join(os.environ["HOME"], ".ivy2", "local", "esgf-artifacts")
+    try:
+        shutil.copytree(local_artifacts_directory, esgf_artifact_directory)
+    except OSError, error:
+        shutil.rmtree(esgf_artifact_directory)
+        shutil.copytree(local_artifacts_directory, esgf_artifact_directory)
+
 def create_local_mirror_directory(active_branch, starting_directory, build_list):
-    '''Creates a directory for binaries and untars to it'''
-    #import pdb; pdb.set_trace()
+    '''Creates a directory for ESGF binaries that will get RSynced and uploaded to the remote distribution mirrors'''
     #if active_branch is devel then copy to dist folder for devel
     #if active_branch is master then copy to dist folder
     print "\nCreating local mirrror directory."
@@ -194,7 +205,6 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
         shutil.rmtree("esgf-cog")
         shutil.copytree("esgf-installer/cog/", "esgf-cog")
 
-
     #dist-repos -> esgf_bin
     if active_branch == "devel":
         esgf_binary_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist', 'devel')
@@ -202,17 +212,10 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
         esgf_binary_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist')
     esgf_artifact_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'artifacts')
 
-
     build_utilities.mkdir_p(esgf_binary_directory)
     build_utilities.mkdir_p(esgf_artifact_directory)
-    
-    #TODO: copy artifacts from ivy cache at {user_name}/.ivy2/local to esgf_artifact_directory;  ~/.ivy2/local/esgf-artifacts/
-    local_artifacts_directory = os.path.join(os.environ["HOME"], ".ivy2", "local", "esgf-artifacts")
-    try:
-        shutil.copytree(local_artifacts_directory, esgf_artifact_directory)
-    except OSError, error:
-        shutil.rmtree(esgf_artifact_directory)
-        shutil.copytree(local_artifacts_directory, esgf_artifact_directory)
+
+    copy_artifacts_to_local_mirror(esgf_artifact_directory)
 
     for component in components.keys():
         component_binary_directory = os.path.join(esgf_binary_directory, component)
