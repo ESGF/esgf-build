@@ -216,10 +216,10 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
         shutil.copytree("esgf-installer/filters/", "filters")
 
     try:
-        shutil.copytree("esgf-installer/cog/esg-cog", "esgf-cog")
+        shutil.copytree("esgf-installer/cog/", "esgf-cog")
     except OSError, error:
         shutil.rmtree("esgf-cog")
-        shutil.copytree("esgf-installer/cog/esg-cog", "esgf-cog")
+        shutil.copytree("esgf-installer/cog/", "esgf-cog")
 
 
     #dist-repos -> esgf_bin
@@ -228,6 +228,7 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
     else:
         esgf_binary_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist')
     esgf_artifact_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'artifacts')
+
     #TODO: copy artifacts from ivy cache at {user_name}/.ivy2/local to esgf_artifact_directory
     build_utilities.mkdir_p(esgf_binary_directory)
     build_utilities.mkdir_p(esgf_artifact_directory)
