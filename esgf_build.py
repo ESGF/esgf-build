@@ -154,36 +154,11 @@ def build_all(build_list, starting_directory):
             if mmap_object.find('BUILD') != -1:
                 return log
 
-def create_esgf_tarballs(starting_directory, build_list):
-    '''create_esgf_tarballs using tarfile'''
-    tarball_dir = starting_directory + "/esgf_tarballs"
-    print "Attempting to remove old tarballs."
-    try:
-        shutil.rmtree(tarball_dir)
-        print "Old tarballs removed, beginning to create tarballs.\n"
-    except OSError:
-        print "No old tarballs located, beginning to create tarballs.\n"
-    os.makedirs(tarball_dir)
-    for repo in build_list:
-        #each tarball will have it's own directory in the main tarball directory
-        local_tarball_dir = os.path.join(tarball_dir, repo)
-        #the path to the repo to create a tar of
-        repo_path = os.path.join(starting_directory, repo)
-        repo_path = os.path.realpath(repo_path)
-        #changing directory to that repo to tar it
-        os.chdir(tarball_dir)
-        with tarfile.open(local_tarball_dir + ".tgz", "w:gz") as tar:
-            #tar.add("../" + repo)
-            tar.add(repo_path, arcname=repo)
-        print repo + " tarball created."
-        os.chdir("..")
-
 def create_local_mirror_directory(active_branch, starting_directory, build_list):
     '''Creates a directory for binaries and untars to it'''
     #import pdb; pdb.set_trace()
     #if active_branch is devel then copy to dist folder for devel
     #if active_branch is master then copy to dist folder
-    #untar in dist and delete tarballs
     print "\nCreating local mirrror directory."
     print "starting_directory:", starting_directory
     components = {}
@@ -199,8 +174,6 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
     components["filters"] = ['esg-access-logging-filter', 'esg-drs-resolving-filter', 'esg-security-las-ip-filter', 'esg-security-tokenless-filters']
     components["esgf-cog"] = ['esg-cog']
     # components['esgf-stats-api'] = ['bin/esg_stats-api_v2', 'dist/esgf-stats-api.war']
-    #
-
 
     #Make separate directories and move these components from esgf-installer to new specific directories
     try:
@@ -232,8 +205,7 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
     #TODO: copy artifacts from ivy cache at {user_name}/.ivy2/local to esgf_artifact_directory
     build_utilities.mkdir_p(esgf_binary_directory)
     build_utilities.mkdir_p(esgf_artifact_directory)
-    # os.chdir('esgf_tarballs')
-    #goes to each tarball listed in the tarballs directory
+
     for component in components.keys():
         component_binary_directory = os.path.join(esgf_binary_directory, component)
         build_utilities.mkdir_p(component_binary_directory)
@@ -243,18 +215,6 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
             shutil.copy(file_path, component_binary_directory)
 
         os.chdir("..")
-    # for tarball in os.listdir(os.getcwd()):
-    #     #this is used to name each repo in esgf_bin
-    #     trgt_dir = tarball.split(".")[0]
-    #     build_utilities.mkdir_p('esgf_bin/prod/dist/devel/{tgt_dir}'.format(tgt_dir=trgt_dir))
-    #     build_utilities.mkdir_p('esgf_bin/prod/dist/{tgt_dir}'.format(tgt_dir=trgt_dir))
-    #     tar = tarfile.open(tarball)
-    #     if active_branch == 'devel':
-    #         tar.extractall(path="../esgf_bin/prod/dist/devel/{tgt_dir}".format(tgt_dir=trgt_dir))
-    #     else:
-    #         tar.extractall(path="../esgf_bin/prod/dist/{tgt_dir}".format(tgt_dir=trgt_dir))
-    #     tar.close()
-    # print "Tarballs extracted to directory.\n"
 
 def update_esg_node(active_branch, starting_directory, script_settings_local):
     '''Updates information in esg-node file'''
@@ -445,8 +405,6 @@ def main():
 
     build_all(build_list, starting_directory)
 
-    # create_esgf_tarballs(starting_directory, build_list)
-    #
     create_local_mirror_directory(active_branch, starting_directory, build_list)
     #
     # try:
