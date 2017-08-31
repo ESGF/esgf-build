@@ -49,6 +49,16 @@ def create_taglist_file(taglist_file, repo_directory, repo_name, latest_tag):
     taglist_file.write(latest_tag + "\n")
     taglist_file.write("\n")
 
+def create_commits_since_last_tag_file(commits_since_last_tag_file, repo_name, latest_tag):
+    commits_since_tag = subprocess.check_output(shlex.split("git log {latest_tag}..HEAD".format(latest_tag=latest_tag)))
+    if commits_since_tag:
+        print "There are new commits since the last annotated tag for {repo_name}".format(repo_name=repo_name)
+        print "See commits_since_last_tag.txt for more details \n"
+        commits_since_last_tag_file.write("-------------------------\n")
+        commits_since_last_tag_file.write("Commits since last tag ({latest_tag}) for {repo_name}".format(latest_tag=latest_tag, repo_name=repo_name) + "\n")
+        commits_since_last_tag_file.write("-------------------------\n")
+        commits_since_last_tag_file.write(commits_since_tag + "\n")
+
 def update_repo(repo_name, repo_object, active_branch):
     ''' accepts a GitPython Repo object and updates the specified branch '''
     print "Checkout {repo_name}'s {active_branch} branch".format(repo_name=repo_name, active_branch=active_branch)
@@ -62,7 +72,7 @@ def update_all(active_branch, repo_directory):
     taglist to track versions '''
     print "Beginning to update directories."
 
-    commits_since_last_tag = open(os.path.join(repo_directory, "commits_since_last_tag.txt"), "w")
+    commits_since_last_tag_file = open(os.path.join(repo_directory, "commits_since_last_tag.txt"), "w")
     taglist_file = open(os.path.join(repo_directory, "taglist.txt"), "w+")
     for repo in repo_info.REPO_LIST:
         try:
@@ -76,17 +86,12 @@ def update_all(active_branch, repo_directory):
         latest_tag = get_latest_tag(repo_handle)
         create_taglist_file(taglist_file, repo_directory, repo, latest_tag)
 
-        commits_since_tag = subprocess.check_output(shlex.split("git log {latest_tag}..HEAD".format(latest_tag=latest_tag)))
-        if commits_since_tag:
-            print "There are new commits since the last annotated tag for {repo}".format(repo=repo)
-            print "See {commits_file} for more details"
-            commits_since_last_tag.write("-------------------------\n")
-            commits_since_last_tag.write("Commits since last tag ({latest_tag}) for {repo}".format(latest_tag=latest_tag, repo=repo) + "\n")
-            commits_since_last_tag.write("-------------------------\n")
-            commits_since_last_tag.write(commits_since_tag + "\n")
+        create_commits_since_last_tag_file(commits_since_last_tag_file, repo, latest_tag)
 
         os.chdir("..")
-    commits_since_last_tag.close()
+
+    taglist_file.close()
+    commits_since_last_tag_file.close()
     print "Directory updates complete."
 
 def build_all(build_list, starting_directory):
