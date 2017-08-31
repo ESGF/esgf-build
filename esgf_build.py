@@ -5,44 +5,44 @@ import shlex
 import os
 import shutil
 import glob
-import errno
 from distutils.spawn import find_executable
-import tarfile
 import mmap
-import hashlib
 from git import Repo
 import repo_info
 import build_utilities
 
 ######IMPORTANT################################################################
 # Everything works and is tested up to update node and upload.
-#Still need to try and eliminate tarballs entirely, eliminate hard-coded
-#script settings in esg-node, use subprocess to set java and python paths,
-#remove ivy.xml, etc.
+# Still need to try and eliminate tarballs entirely, eliminate hard-coded
+# script settings in esg-node, use subprocess to set java and python paths,
+# remove ivy.xml, etc.
 #
 # Current idea was to replace build_list with repo_info.CREATE_DIRECTORY_LIST
-#in create_local_mirror_directory and create_esgf_tarballs function in order to
-#set up esgf-installer which is needed in line 162 onward.
+# in create_local_mirror_directory and create_esgf_tarballs function in order to
+# set up esgf-installer which is needed in line 162 onward.
 #
 # esgf_upload remains un-tested and is a direct copy of the bash script
-#into a subprocess.
+# into a subprocess.
 
 
 from git import RemoteProgress
+
 
 class ProgressPrinter(RemoteProgress):
     def update(self, op_code, cur_count, max_count=None, message=''):
         print op_code, cur_count, max_count, cur_count / (max_count or 100.0), message or "NO MESSAGE"
 
+
 def get_latest_tag(repo):
     '''accepts a GitPython Repo object and returns the latest annotated tag '''
-    #provides all the tags, reverses them (so that you can get the latest
-    #tag) and then takes only the first from the list
+    # provides all the tags, reverses them (so that you can get the latest
+    # tag) and then takes only the first from the list
     tag_list = repo.tags
     latest_tag = str(tag_list[-1])
     return latest_tag
 
-def create_taglist_file(taglist_file, repo_directory, repo_name, latest_tag):
+
+def create_taglist_file(taglist_file, repo_name, latest_tag):
     ''' Creates a file containing the latest tag for each repo '''
     taglist_file.write("-------------------------\n")
     taglist_file.write(repo_name + "\n")
@@ -50,30 +50,37 @@ def create_taglist_file(taglist_file, repo_directory, repo_name, latest_tag):
     taglist_file.write(latest_tag + "\n")
     taglist_file.write("\n")
 
+
 def create_commits_since_last_tag_file(commits_since_last_tag_file, repo_name, latest_tag):
-    commits_since_tag = subprocess.check_output(shlex.split("git log {latest_tag}..HEAD".format(latest_tag=latest_tag)))
+    commits_since_tag = subprocess.check_output(shlex.split(
+        "git log {latest_tag}..HEAD".format(latest_tag=latest_tag)))
     if commits_since_tag:
         print "There are new commits since the last annotated tag for {repo_name}".format(repo_name=repo_name)
         print "See commits_since_last_tag.txt for more details \n"
         commits_since_last_tag_file.write("-------------------------\n")
-        commits_since_last_tag_file.write("Commits since last tag ({latest_tag}) for {repo_name}".format(latest_tag=latest_tag, repo_name=repo_name) + "\n")
+        commits_since_last_tag_file.write("Commits since last tag ({latest_tag}) for {repo_name}".format(
+            latest_tag=latest_tag, repo_name=repo_name) + "\n")
         commits_since_last_tag_file.write("-------------------------\n")
         commits_since_last_tag_file.write(commits_since_tag + "\n")
+
 
 def update_repo(repo_name, repo_object, active_branch):
     ''' accepts a GitPython Repo object and updates the specified branch '''
     print "Checkout {repo_name}'s {active_branch} branch".format(repo_name=repo_name, active_branch=active_branch)
     repo_object.git.checkout(active_branch)
     progress_printer = ProgressPrinter()
-    repo_object.remotes.origin.pull("{active_branch}:{active_branch}".format(active_branch=active_branch),progress=progress_printer)
+    repo_object.remotes.origin.pull("{active_branch}:{active_branch}".format(
+        active_branch=active_branch), progress=progress_printer)
     print "Updating: " + repo_name
+
 
 def update_all(active_branch, repo_directory):
     '''Checks each repo in the REPO_LIST for the most updated branch, and uses
     taglist to track versions '''
     print "Beginning to update directories."
 
-    commits_since_last_tag_file = open(os.path.join(repo_directory, "commits_since_last_tag.txt"), "w")
+    commits_since_last_tag_file = open(os.path.join(
+        repo_directory, "commits_since_last_tag.txt"), "w")
     taglist_file = open(os.path.join(repo_directory, "taglist.txt"), "w+")
     for repo in repo_info.REPO_LIST:
         try:
@@ -85,7 +92,7 @@ def update_all(active_branch, repo_directory):
         update_repo(repo, repo_handle, active_branch)
 
         latest_tag = get_latest_tag(repo_handle)
-        create_taglist_file(taglist_file, repo_directory, repo, latest_tag)
+        create_taglist_file(taglist_file, repo, latest_tag)
 
         create_commits_since_last_tag_file(commits_since_last_tag_file, repo, latest_tag)
 
@@ -95,12 +102,13 @@ def update_all(active_branch, repo_directory):
     commits_since_last_tag_file.close()
     print "Directory updates complete."
 
+
 def build_all(build_list, starting_directory):
     '''Takes a list of repositories to build, and uses ant to build them '''
-    #TODO: use subprocess w/ bash command to set the java and python paths
-    #TODO: add loading bar while ant runs?
-    #TODO: include installer in build script for final version
-    #TODO: Remove ivy.xml directory?
+    # TODO: use subprocess w/ bash command to set the java and python paths
+    # TODO: add loading bar while ant runs?
+    # TODO: include installer in build script for final version
+    # TODO: Remove ivy.xml directory?
     ant_path = find_executable('ant')
     #java_path = find_executable('java')
     #python_path = find_executable('python')
@@ -111,8 +119,10 @@ def build_all(build_list, starting_directory):
     for repo in build_list:
         print "Building repo: " + repo
         os.chdir(starting_directory + "/" + repo)
-        #repos getcert and stats-api do not need an ant pull call
+
+        # repos getcert and stats-api do not need an ant pull call
         if repo == 'esgf-getcert':
+            #clean and dist only
             clean_log = log_directory + "/" + repo + "-clean.log"
             with open(clean_log, "w") as fgc1:
                 build_utilities.stream_subprocess_output('{ant} clean'.format(ant=ant_path), fgc1)
@@ -121,15 +131,22 @@ def build_all(build_list, starting_directory):
                 build_utilities.stream_subprocess_output('{ant} dist'.format(ant=ant_path), fgc2)
             os.chdir("..")
             continue
+
         if repo == 'esgf-stats-api':
+            #clean and make_dist only
             clean_log = log_directory + "/" + repo + "-clean.log"
             with open(clean_log, "w") as fsapi1:
-                build_utilities.stream_subprocess_output('{ant} clean_all'.format(ant=ant_path), fsapi1)
+                build_utilities.stream_subprocess_output(
+                    '{ant} clean_all'.format(ant=ant_path), fsapi1)
             build_log = log_directory + "/" + repo + "-build.log"
             with open(build_log, "w") as fsapi2:
-                build_utilities.stream_subprocess_output("{ant} make_dist".format(ant=ant_path), fsapi2)
+                build_utilities.stream_subprocess_output(
+                    "{ant} make_dist".format(ant=ant_path), fsapi2)
             os.chdir('..')
             continue
+
+        #clean, build, and make_dist
+        #TODO: Add publish step
         clean_log = log_directory + "/" + repo + "-clean.log"
         with open(clean_log, "w") as file1:
             build_utilities.stream_subprocess_output('{ant} clean_all'.format(ant=ant_path), file1)
@@ -142,11 +159,14 @@ def build_all(build_list, starting_directory):
         os.chdir("..")
 
     print "\nRepository builds complete."
+
+    #TODO: extract to separate function
+    #TODO: list clean, pull, and publish logs as well
     print "Finding esgf log files.\n"
 
-    #uses glob to find all esgf log files then iterates over the log files ,
-    #opens them and uses a mmap object to search through for BUILD reference
-    #returns the ones with BUILD references to be checked by a script during build
+    # uses glob to find all esgf log files then iterates over the log files ,
+    # opens them and uses a mmap object to search through for BUILD reference
+    # returns the ones with BUILD references to be checked by a script during build
     all_logs = glob.glob('buildlogs/esg*-*-build.log')
     for log in all_logs:
         with open(log) as flog:
@@ -166,27 +186,34 @@ def copy_artifacts_to_local_mirror(esgf_artifact_directory):
         shutil.rmtree(esgf_artifact_directory)
         shutil.copytree(local_artifacts_directory, esgf_artifact_directory)
 
+
 def create_local_mirror_directory(active_branch, starting_directory, build_list):
     '''Creates a directory for ESGF binaries that will get RSynced and uploaded to the remote distribution mirrors'''
-    #if active_branch is devel then copy to dist folder for devel
-    #if active_branch is master then copy to dist folder
+    # if active_branch is devel then copy to dist folder for devel
+    # if active_branch is master then copy to dist folder
     print "\nCreating local mirrror directory."
     print "starting_directory:", starting_directory
     components = {}
-    components["esgf-dashboard"] = ['bin/esg-dashboard', 'dist/esgf_dashboard-0.0.0-py2.7.egg', 'INSTALL', 'README', 'LICENSE']
+    components["esgf-dashboard"] = ['bin/esg-dashboard',
+                                    'dist/esgf_dashboard-0.0.0-py2.7.egg', 'INSTALL', 'README', 'LICENSE']
     components["esgf-idp"] = ['bin/esg-idp', 'INSTALL', 'README', 'LICENSE']
-    components["esgf-installer"] = ['jar_security_scan', 'globus/esg-globus', 'esg-bootstrap', 'esg-node', 'esg-init', 'esg-functions', 'esg-gitstrap', 'esg-node.completion', 'esg-purge.sh', 'compute-tools/esg-compute-languages', 'compute-tools/esg-compute-tools', 'INSTALL', 'README.md', 'LICENSE']
-    components["esgf-node-manager"] = ['bin/esg-node-manager', 'bin/esgf-sh', 'bin/esgf-spotcheck', 'etc/xsd/registration/registration.xsd', 'INSTALL', 'README', 'LICENSE']
-    components["esgf-security"] = ['bin/esgf-user-migrate', 'bin/esg-security', 'bin/esgf-policy-check', 'INSTALL', 'README', 'LICENSE']
+    components["esgf-installer"] = ['jar_security_scan', 'globus/esg-globus', 'esg-bootstrap', 'esg-node', 'esg-init', 'esg-functions', 'esg-gitstrap',
+                                    'esg-node.completion', 'esg-purge.sh', 'compute-tools/esg-compute-languages', 'compute-tools/esg-compute-tools', 'INSTALL', 'README.md', 'LICENSE']
+    components["esgf-node-manager"] = ['bin/esg-node-manager', 'bin/esgf-sh', 'bin/esgf-spotcheck',
+                                       'etc/xsd/registration/registration.xsd', 'INSTALL', 'README', 'LICENSE']
+    components["esgf-security"] = ['bin/esgf-user-migrate', 'bin/esg-security',
+                                   'bin/esgf-policy-check', 'INSTALL', 'README', 'LICENSE']
     components["esg-orp"] = ['bin/esg-orp', 'INSTALL', 'README', 'LICENSE']
     # components['esgf-getcert'] = ['README', 'LICENSE']
-    components["esg-search"] = ['bin/esg-search', 'bin/esgf-crawl', 'bin/esgf-optimize-index', 'etc/conf/jetty/jetty.xml-auth', 'etc/conf/jetty/realm.properties', 'etc/conf/jetty/webdefault.xml-auth', 'INSTALL', 'README', 'LICENSE']
+    components["esg-search"] = ['bin/esg-search', 'bin/esgf-crawl', 'bin/esgf-optimize-index', 'etc/conf/jetty/jetty.xml-auth',
+                                'etc/conf/jetty/realm.properties', 'etc/conf/jetty/webdefault.xml-auth', 'INSTALL', 'README', 'LICENSE']
     components['esgf-product-server'] = ['esg-product-server']
-    components["filters"] = ['esg-access-logging-filter', 'esg-drs-resolving-filter', 'esg-security-las-ip-filter', 'esg-security-tokenless-filters']
+    components["filters"] = ['esg-access-logging-filter', 'esg-drs-resolving-filter',
+                             'esg-security-las-ip-filter', 'esg-security-tokenless-filters']
     components["esgf-cog"] = ['esg-cog']
     # components['esgf-stats-api'] = ['bin/esg_stats-api_v2', 'dist/esgf-stats-api.war']
 
-    #Make separate directories and move these components from esgf-installer to new specific directories
+    # Make separate directories and move these components from esgf-installer to new specific directories
     try:
         shutil.copytree("esgf-installer/product-server/", "esgf-product-server")
     except OSError, error:
@@ -205,9 +232,10 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
         shutil.rmtree("esgf-cog")
         shutil.copytree("esgf-installer/cog/", "esgf-cog")
 
-    #dist-repos -> esgf_bin
+    # dist-repos -> esgf_bin
     if active_branch == "devel":
-        esgf_binary_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist', 'devel')
+        esgf_binary_directory = os.path.join(
+            starting_directory, 'esgf_bin', 'prod', 'dist', 'devel')
     else:
         esgf_binary_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist')
     esgf_artifact_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'artifacts')
@@ -227,9 +255,10 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
 
         os.chdir("..")
 
+
 def update_esg_node(active_branch, starting_directory, script_settings_local):
     '''Updates information in esg-node file'''
-    #TODO: in the future, remove hard-coded script settings from esgf-node
+    # TODO: in the future, remove hard-coded script settings from esgf-node
     os.chdir("../esgf-installer")
     src_dir = os.getcwd()
 
@@ -241,7 +270,7 @@ def update_esg_node(active_branch, starting_directory, script_settings_local):
 
     if active_branch == 'devel':
         installer_dir = (starting_directory
-                         +'/esgf_bin/prod/dist/devel/esgf-installer/'
+                         + '/esgf_bin/prod/dist/devel/esgf-installer/'
                          + script_settings_local['script_major_version'])
         last_push_dir = (starting_directory + '/dist-repos/prod/dist/devel')
     else:
@@ -256,9 +285,11 @@ def update_esg_node(active_branch, starting_directory, script_settings_local):
 
     print "Updating node with script versions."
     build_utilities.replace_string_in_file('esg-node', replace_script_maj_version,
-                           script_settings_local['script_major_version'])
-    build_utilities.replace_string_in_file('esg-node', replace_release, script_settings_local['script_release'])
-    build_utilities.replace_string_in_file('esg-node', replace_version, script_settings_local['script_version'])
+                                           script_settings_local['script_major_version'])
+    build_utilities.replace_string_in_file(
+        'esg-node', replace_release, script_settings_local['script_release'])
+    build_utilities.replace_string_in_file(
+        'esg-node', replace_version, script_settings_local['script_version'])
 
     print "Copying esg-init and auto-installer."
     shutil.copyfile(src_dir + "/esg-init", installer_dir + "/esg-init")
@@ -274,26 +305,27 @@ def update_esg_node(active_branch, starting_directory, script_settings_local):
     with open('lastpush.md5', 'w') as file1:
         file1.write(build_utilities.get_md5sum(last_push_dir))
 
+
 def esgf_upload():
     '''Uses rsync to upload to coffee server'''
-    #use rsync to upload
+    # use rsync to upload
     print "Beginning upload."
     with open('esgfupload.log', 'a') as file1:
         build_utilities.stream_subprocess_output("rsync -arWvu dist-repos/prod/ -e ssh --delete"
-                                 /" esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/"
-                                 /"2>&1 |tee esgfupload.log", file1)
+                                                 / " esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/"
+                                                 / "2>&1 |tee esgfupload.log", file1)
     with open('esgfupload.log', 'a') as file1:
         build_utilities.stream_subprocess_output("rsync -arWvunO dist-repos/prod/ -e ssh --delete"
-                                 /"esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/"
-                                 /" 2>&1 |tee esgfupload.log", file1)
+                                                 / "esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/"
+                                                 / " 2>&1 |tee esgfupload.log", file1)
     print "Upload completed!"
 
 
 def create_build_list(build_list, select_repo, all_repos_opt):
     '''Creates a list of repos to build depending on a menu that the user picks from'''
 
-    #If the user has indicated that all repos should be built, then the repos
-    #from the repo list in repo info is purged of exclusions and set as the build_list
+    # If the user has indicated that all repos should be built, then the repos
+    # from the repo list in repo info is purged of exclusions and set as the build_list
     if all_repos_opt is True:
         build_list = repo_info.REPO_LIST
         for repo in build_list:
@@ -305,9 +337,9 @@ def create_build_list(build_list, select_repo, all_repos_opt):
         print "\n"
         return
 
-    #If the user has selcted the repos to build, the indexes are used to select
-    #the repo names from the menu , any selected repos on the exclusion list are
-    #purged, and the rest are appened to the build_list
+    # If the user has selcted the repos to build, the indexes are used to select
+    # the repo names from the menu , any selected repos on the exclusion list are
+    # purged, and the rest are appened to the build_list
     select_repo = select_repo.split(',')
     select_repo = map(int, select_repo)
     for repo_num in select_repo:
@@ -325,16 +357,18 @@ def create_build_list(build_list, select_repo, all_repos_opt):
         print "Building repos: " + str(build_list)
         print "\n"
 
+
 def set_script_settings(default_script_q, script_settings_local):
     '''Sets the script settings depending on input or default'''
     if default_script_q.lower() not in ['y', 'yes', '']:
         script_settings_local['script_major_version'] = raw_input("Please set the"
-                                                                  +" script_major_version: ")
+                                                                  + " script_major_version: ")
         script_settings_local['script_release'] = raw_input("Please set the script_release: ")
         script_settings_local['script_version'] = raw_input("Please set the script version: ")
         return script_settings_local
     print "Using default script settings."
     return repo_info.SCRIPT_INFO.copy()
+
 
 def find_path_to_repos(starting_directory):
     '''Checks the path provided to the repos to see if it exists'''
@@ -350,6 +384,7 @@ def find_path_to_repos(starting_directory):
     os.makedirs(starting_directory)
     starting_directory = os.path.realpath(starting_directory)
     return False
+
 
 def get_most_recent_commit(repo_handle):
     '''Gets the most recent commit w/ log and list comprehension'''
@@ -381,8 +416,8 @@ def main():
 
     update_all(active_branch, starting_directory)
 
-    #Use a raw_input statement to ask which repos should be built, then call
-    #the create_build_list with all_repos_opt set to either True or False
+    # Use a raw_input statement to ask which repos should be built, then call
+    # the create_build_list with all_repos_opt set to either True or False
     print repo_info.REPO_MENU
     while True:
         select_repo = raw_input("Which repositories will be built? (Hit [Enter] for all) ")
@@ -402,8 +437,8 @@ def main():
                 print "Invalid entry, please enter repos to build."
                 continue
 
-    #Ask the user if they want to use default script settings, if yes call the
-    #set_script_settings function
+    # Ask the user if they want to use default script settings, if yes call the
+    # set_script_settings function
     print ("Default Script Settings: \n"
            + 'SCRIPT_MAJOR_VERSION = ' + repo_info.SCRIPT_INFO['script_major_version'] + "\n"
            + 'SCRIPT_RELEASE = ' + repo_info.SCRIPT_INFO['script_release'] + "\n"
@@ -423,7 +458,8 @@ def main():
     # except IOError:
     #     print ("esgf_bin for installer not present, node update and server upload cannot be completed.")
 
-    #esgf_upload()
+    # esgf_upload()
+
 
 if __name__ == '__main__':
     main()
