@@ -194,7 +194,7 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
     components["esgf-security"] = ['bin/esgf-user-migrate', 'bin/esg-security', 'bin/esgf-policy-check', 'INSTALL', 'README', 'LICENSE']
     components["esg-orp"] = ['bin/esg-orp', 'INSTALL', 'README', 'LICENSE']
     # components['esgf-getcert'] = ['README', 'LICENSE']
-    components["esg-search"] = ['bin/esg-search', 'bin/esgf-crawl', 'bin/esgf-optimize-index', 'etc/conf/jetty/jetty.xml-auth', 'etc/conf/jetty/realm.properties', 'etc/conf/solr/solrconfig.xml-replica', 'etc/conf/solr/solr.xml-master', 'etc/conf/solr/solr.xml-slave', 'etc/conf/jetty/webdefault.xml-auth', 'INSTALL', 'README', 'LICENSE']
+    components["esg-search"] = ['bin/esg-search', 'bin/esgf-crawl', 'bin/esgf-optimize-index', 'etc/conf/jetty/jetty.xml-auth', 'etc/conf/jetty/realm.properties', 'etc/conf/jetty/webdefault.xml-auth', 'INSTALL', 'README', 'LICENSE']
     components['esgf-product-server'] = ['esg-product-server']
     # components["filters"] = ['esg-access-logging-filter', 'esg-drs-resolving-filter', 'esg-security-las-ip-filter', 'esg-security-tokenless-filters']
     # components["esgf-cog"] = ['esg-cog']
