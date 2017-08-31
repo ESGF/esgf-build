@@ -12,7 +12,6 @@ REPOS_TO_EXCLUDE = ['esgf-installer', 'esgf-publisher-resources', 'esg-publisher
 
 ALL_REPO_URLS = [
     'https://github.com/ESGF/esgf-dashboard.git',
-    'https://github.com/ESGF/esgf-desktop.git',
     'https://github.com/ESGF/esgf-getcert.git',
     'https://github.com/ESGF/esgf-idp.git',
     'https://github.com/ESGF/esgf-installer.git',
@@ -27,7 +26,6 @@ ALL_REPO_URLS = [
 
 REPO_LIST = [
     'esgf-dashboard',
-    'esgf-desktop',
     'esgf-getcert',
     'esgf-idp',
     'esgf-installer',
@@ -57,17 +55,16 @@ CREATE_DIRECTORY_LIST = [
 REPO_MENU = 'Repository menu:\n'\
 '----------------------------------------\n'\
 '0: esgf-dashboard\n'\
-'1: esgf-desktop\n'\
-'2: esgf-getcert\n'\
-'3: esgf-idp\n'\
-'4: esgf-installer\n'\
-'5: esgf-node-manager\n'\
-'6: esgf-publisher-resources\n'\
-'7: esgf-security\n'\
-'8: esg-orp\n'\
-'9: esg-publisher\n'\
-'10: esg-search\n'\
-'11: esgf-stats-api\n'\
+'1: esgf-getcert\n'\
+'2: esgf-idp\n'\
+'3: esgf-installer\n'\
+'4: esgf-node-manager\n'\
+'5: esgf-publisher-resources\n'\
+'6: esgf-security\n'\
+'7: esg-orp\n'\
+'8: esg-publisher\n'\
+'9: esg-search\n'\
+'10: esgf-stats-api\n'\
 "To select a repo, enter the appropriate number.\n"\
 "To select multiple repos, seperate each number with a comma.\n"\
 "Example: '0, 3, 5'\n"
