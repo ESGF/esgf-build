@@ -12,6 +12,7 @@ import mmap
 import hashlib
 from git import Repo
 import repo_info
+import build_utilities
 
 ######IMPORTANT################################################################
 # Everything works and is tested up to update node and upload.
@@ -114,30 +115,30 @@ def build_all(build_list, starting_directory):
         if repo == 'esgf-getcert':
             clean_log = log_directory + "/" + repo + "-clean.log"
             with open(clean_log, "w") as fgc1:
-                stream_subprocess_output('{ant} clean'.format(ant=ant_path), fgc1)
+                build_utilities.stream_subprocess_output('{ant} clean'.format(ant=ant_path), fgc1)
             build_log = log_directory + "/" + repo + "-build.log"
             with open(build_log, "w") as fgc2:
-                stream_subprocess_output('{ant} dist'.format(ant=ant_path), fgc2)
+                build_utilities.stream_subprocess_output('{ant} dist'.format(ant=ant_path), fgc2)
             os.chdir("..")
             continue
         if repo == 'esgf-stats-api':
             clean_log = log_directory + "/" + repo + "-clean.log"
             with open(clean_log, "w") as fsapi1:
-                stream_subprocess_output('{ant} clean_all'.format(ant=ant_path), fsapi1)
+                build_utilities.stream_subprocess_output('{ant} clean_all'.format(ant=ant_path), fsapi1)
             build_log = log_directory + "/" + repo + "-build.log"
             with open(build_log, "w") as fsapi2:
-                stream_subprocess_output("{ant} make_dist".format(ant=ant_path), fsapi2)
+                build_utilities.stream_subprocess_output("{ant} make_dist".format(ant=ant_path), fsapi2)
             os.chdir('..')
             continue
         clean_log = log_directory + "/" + repo + "-clean.log"
         with open(clean_log, "w") as file1:
-            stream_subprocess_output('{ant} clean_all'.format(ant=ant_path), file1)
+            build_utilities.stream_subprocess_output('{ant} clean_all'.format(ant=ant_path), file1)
         pull_log = log_directory + "/" + repo + "-pull.log"
         with open(pull_log, "w") as file2:
-            stream_subprocess_output('{ant} pull'.format(ant=ant_path), file2)
+            build_utilities.stream_subprocess_output('{ant} pull'.format(ant=ant_path), file2)
         build_log = log_directory + "/" + repo + "-build.log"
         with open(build_log, "w") as file3:
-            stream_subprocess_output("{ant} make_dist".format(ant=ant_path), file3)
+            build_utilities.stream_subprocess_output("{ant} make_dist".format(ant=ant_path), file3)
         os.chdir("..")
 
     print "\nRepository builds complete."
@@ -184,22 +185,30 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
     #if active_branch is master then copy to dist folder
     #untar in dist and delete tarballs
     print "\nCreating local mirrror directory."
+    components = {}
+    components["esgf-dashboard"] = ['bin/esg-dashboard', 'dist/esgf_dashboard-0.0.2-py2.7.egg', 'INSTALL', 'README', 'LICENSE']
     #dist-repos -> esgf_bin
-    mkdir_p('../esgf_bin')
-    os.chdir('esgf_tarballs')
+    build_utilities.mkdir_p('../esgf_bin')
+    # os.chdir('esgf_tarballs')
     #goes to each tarball listed in the tarballs directory
-    for tarball in os.listdir(os.getcwd()):
-        #this is used to name each repo in esgf_bin
-        trgt_dir = tarball.split(".")[0]
-        mkdir_p('esgf_bin/prod/dist/devel/{tgt_dir}'.format(tgt_dir=trgt_dir))
-        mkdir_p('esgf_bin/prod/dist/{tgt_dir}'.format(tgt_dir=trgt_dir))
-        tar = tarfile.open(tarball)
-        if active_branch == 'devel':
-            tar.extractall(path="../esgf_bin/prod/dist/devel/{tgt_dir}".format(tgt_dir=trgt_dir))
-        else:
-            tar.extractall(path="../esgf_bin/prod/dist/{tgt_dir}".format(tgt_dir=trgt_dir))
-        tar.close()
-    print "Tarballs extracted to directory.\n"
+    for component in components.keys():
+        build_utilities.mkdir_p("../esgf_bin/{component}".format(component=component))
+        os.chdir(component)
+        print "current_directory: ", os.getcwd()
+        for file_path in components[component]:
+            shutil.copyfile(file_path, "../esgf_bin/{component}".format(component=component))
+    # for tarball in os.listdir(os.getcwd()):
+    #     #this is used to name each repo in esgf_bin
+    #     trgt_dir = tarball.split(".")[0]
+    #     build_utilities.mkdir_p('esgf_bin/prod/dist/devel/{tgt_dir}'.format(tgt_dir=trgt_dir))
+    #     build_utilities.mkdir_p('esgf_bin/prod/dist/{tgt_dir}'.format(tgt_dir=trgt_dir))
+    #     tar = tarfile.open(tarball)
+    #     if active_branch == 'devel':
+    #         tar.extractall(path="../esgf_bin/prod/dist/devel/{tgt_dir}".format(tgt_dir=trgt_dir))
+    #     else:
+    #         tar.extractall(path="../esgf_bin/prod/dist/{tgt_dir}".format(tgt_dir=trgt_dir))
+    #     tar.close()
+    # print "Tarballs extracted to directory.\n"
 
 def update_esg_node(active_branch, starting_directory, script_settings_local):
     '''Updates information in esg-node file'''
@@ -229,71 +238,39 @@ def update_esg_node(active_branch, starting_directory, script_settings_local):
     replace_version = 'v2.0-RC5.4.0-devel'
 
     print "Updating node with script versions."
-    replace_string_in_file('esg-node', replace_script_maj_version,
+    build_utilities.replace_string_in_file('esg-node', replace_script_maj_version,
                            script_settings_local['script_major_version'])
-    replace_string_in_file('esg-node', replace_release, script_settings_local['script_release'])
-    replace_string_in_file('esg-node', replace_version, script_settings_local['script_version'])
+    build_utilities.replace_string_in_file('esg-node', replace_release, script_settings_local['script_release'])
+    build_utilities.replace_string_in_file('esg-node', replace_version, script_settings_local['script_version'])
 
     print "Copying esg-init and auto-installer."
     shutil.copyfile(src_dir + "/esg-init", installer_dir + "/esg-init")
     shutil.copyfile(src_dir + "/setup-autoinstall", installer_dir + "/setup-autoinstall")
 
     with open('esg-init.md5', 'w') as file1:
-        file1.write(get_md5sum('esg-init'))
+        file1.write(build_utilities.get_md5sum('esg-init'))
     with open('esg-node.md5', 'w') as file1:
-        file1.write(get_md5sum('esg-node'))
+        file1.write(build_utilities.get_md5sum('esg-node'))
     with open('esg-autoinstall.md5', 'w') as file1:
-        file1.write(get_md5sum('esg-autoinstall'))
+        file1.write(build_utilities.get_md5sum('esg-autoinstall'))
     os.chdir(last_push_dir)
     with open('lastpush.md5', 'w') as file1:
-        file1.write(get_md5sum(last_push_dir))
+        file1.write(build_utilities.get_md5sum(last_push_dir))
 
 def esgf_upload():
     '''Uses rsync to upload to coffee server'''
     #use rsync to upload
     print "Beginning upload."
     with open('esgfupload.log', 'a') as file1:
-        stream_subprocess_output("rsync -arWvu dist-repos/prod/ -e ssh --delete"
+        build_utilities.stream_subprocess_output("rsync -arWvu dist-repos/prod/ -e ssh --delete"
                                  /" esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/"
                                  /"2>&1 |tee esgfupload.log", file1)
     with open('esgfupload.log', 'a') as file1:
-        stream_subprocess_output("rsync -arWvunO dist-repos/prod/ -e ssh --delete"
+        build_utilities.stream_subprocess_output("rsync -arWvunO dist-repos/prod/ -e ssh --delete"
                                  /"esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/"
                                  /" 2>&1 |tee esgfupload.log", file1)
     print "Upload completed!"
 
-def stream_subprocess_output(command_string, file_handle):
-    ''' Print out the stdout of the subprocess in real time '''
-    process = subprocess.Popen(shlex.split(command_string), stdout=subprocess.PIPE)
-    with process.stdout:
-        for line in iter(process.stdout.readline, b''):
-            print line,
-            file_handle.write(line)
-    # wait for the subprocess to exit
-    process.wait()
-
-def mkdir_p(path, mode=0777):
-    '''Makes directory, passes if directory already exists'''
-    try:
-        os.makedirs(path, mode)
-    except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            print "{path} already exists".format(path=path)
-            print "Removing and rebuilding path."
-            shutil.rmtree(path)
-            mkdir_p(path, mode=0777)
-        else:
-            raise
-
-def replace_string_in_file(file_name, original_string, new_string):
-    '''Goes into a file and replaces string'''
-    with open(file_name, 'r') as file_handle:
-        filedata = file_handle.read()
-    filedata = filedata.replace(original_string, new_string)
-
-    # Write the file out again
-    with open(file_name, 'w') as file_handle:
-        file_handle.write(filedata)
 
 def create_build_list(build_list, select_repo, all_repos_opt):
     '''Creates a list of repos to build depending on a menu that the user picks from'''
@@ -363,17 +340,6 @@ def get_most_recent_commit(repo_handle):
     mst_rcnt_cmmt = repo_handle.git.log().split("\ncommit")[0]
     return mst_rcnt_cmmt
 
-def get_md5sum(file_name):
-    '''
-        #Utility function, wraps md5sum so it may be used on either mac or
-        #linux machines
-    '''
-    hasher = hashlib.md5()
-    with open(file_name, 'rb') as file_handle:
-        buf = file_handle.read()
-        hasher.update(buf)
-        file_name_md5 = hasher.hexdigest()
-    return file_name_md5
 
 def main():
     '''User prompted for build specifications and functions for build are called'''
@@ -433,14 +399,14 @@ def main():
 
     build_all(build_list, starting_directory)
 
-    create_esgf_tarballs(starting_directory, build_list)
-
+    # create_esgf_tarballs(starting_directory, build_list)
+    #
     create_local_mirror_directory(active_branch, starting_directory, build_list)
-
-    try:
-        update_esg_node(active_branch, starting_directory, script_settings_local)
-    except IOError:
-        print ("esgf_bin for installer not present, node update and server upload cannot be completed.")
+    #
+    # try:
+    #     update_esg_node(active_branch, starting_directory, script_settings_local)
+    # except IOError:
+    #     print ("esgf_bin for installer not present, node update and server upload cannot be completed.")
 
     #esgf_upload()
 
