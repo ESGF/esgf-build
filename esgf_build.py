@@ -196,23 +196,30 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
     # components['esgf-getcert'] = ['README', 'LICENSE']
     components["esg-search"] = ['bin/esg-search', 'bin/esgf-crawl', 'bin/esgf-optimize-index', 'etc/conf/jetty/jetty.xml-auth', 'etc/conf/jetty/realm.properties', 'etc/conf/jetty/webdefault.xml-auth', 'INSTALL', 'README', 'LICENSE']
     components['esgf-product-server'] = ['esg-product-server']
-    # components["filters"] = ['esg-access-logging-filter', 'esg-drs-resolving-filter', 'esg-security-las-ip-filter', 'esg-security-tokenless-filters']
-    # components["esgf-cog"] = ['esg-cog']
+    components["filters"] = ['esg-access-logging-filter', 'esg-drs-resolving-filter', 'esg-security-las-ip-filter', 'esg-security-tokenless-filters']
+    components["esgf-cog"] = ['esg-cog']
     # components['esgf-stats-api'] = ['bin/esg_stats-api_v2', 'dist/esgf-stats-api.war']
     #
-    # #TODO: ???????????????????????????????????????????????????????????
+
+
     #Make separate directories and move these components from esgf-installer to new specific directories
-    # mkdir_p("esgf-product-server")
     try:
         shutil.copytree("esgf-installer/product-server/", "esgf-product-server")
     except OSError, error:
         shutil.rmtree("esgf-product-server")
         shutil.copytree("esgf-installer/product-server/", "esgf-product-server")
-    # mkdir_p("filters")
-    # mkdir_p("esgf-cog")
-    # cp esgf-installer/product-server/* esgf-product-server/
-    # cp esgf-installer/cog/esg-cog esgf-cog
-    # cp esgf-installer/filters/* filters/
+
+    try:
+        shutil.copytree("esgf-installer/filters/", "filters")
+    except OSError, error:
+        shutil.rmtree("filters")
+        shutil.copytree("esgf-installer/filters/", "filters")
+
+    try:
+        shutil.copytree("esgf-installer/cog/esg-cog", "esgf-cog")
+    except OSError, error:
+        shutil.rmtree("esgf-cog")
+        shutil.copytree("esgf-installer/cog/esg-cog", "esgf-cog")
 
 
     #dist-repos -> esgf_bin
