@@ -41,6 +41,13 @@ def get_latest_tag(repo):
     latest_tag = str(tag_list[-1])
     return latest_tag
 
+def create_taglist_file(taglist_file, repo_directory, repo_name, latest_tag):
+    ''' Creates a file containing the latest tag for each repo '''
+    taglist_file.write("-------------------------\n")
+    taglist_file.write(repo_name + "\n")
+    taglist_file.write("-------------------------\n")
+    taglist_file.write(latest_tag + "\n")
+    taglist_file.write("\n")
 
 def update_repo(repo_name, repo_object, active_branch):
     ''' accepts a GitPython Repo object and updates the specified branch '''
@@ -55,9 +62,8 @@ def update_all(active_branch, repo_directory):
     taglist to track versions '''
     print "Beginning to update directories."
 
-    taglist_file = open(os.path.join(repo_directory, "taglist.txt"), "w")
     commits_since_last_tag = open(os.path.join(repo_directory, "commits_since_last_tag.txt"), "w")
-
+    taglist_file = open(os.path.join(repo_directory, "taglist.txt"), "w+")
     for repo in repo_info.REPO_LIST:
         try:
             os.chdir(repo_directory + "/" + repo)
@@ -68,12 +74,7 @@ def update_all(active_branch, repo_directory):
         update_repo(repo, repo_handle, active_branch)
 
         latest_tag = get_latest_tag(repo_handle)
-
-        taglist_file.write("-------------------------\n")
-        taglist_file.write(repo + "\n")
-        taglist_file.write("-------------------------\n")
-        taglist_file.write(latest_tag + "\n")
-        taglist_file.write("\n")
+        create_taglist_file(taglist_file, repo_directory, repo, latest_tag)
 
         commits_since_tag = subprocess.check_output(shlex.split("git log {latest_tag}..HEAD".format(latest_tag=latest_tag)))
         if commits_since_tag:
@@ -85,8 +86,6 @@ def update_all(active_branch, repo_directory):
             commits_since_last_tag.write(commits_since_tag + "\n")
 
         os.chdir("..")
-
-    taglist_file.close()
     commits_since_last_tag.close()
     print "Directory updates complete."
 
