@@ -185,18 +185,56 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
     #if active_branch is master then copy to dist folder
     #untar in dist and delete tarballs
     print "\nCreating local mirrror directory."
+    print "starting_directory:", starting_directory
     components = {}
-    components["esgf-dashboard"] = ['bin/esg-dashboard', 'dist/esgf_dashboard-0.0.2-py2.7.egg', 'INSTALL', 'README', 'LICENSE']
+    components["esgf-dashboard"] = ['bin/esg-dashboard', 'dist/esgf_dashboard-0.0.0-py2.7.egg', 'INSTALL', 'README', 'LICENSE']
+    components["esgf-idp"] = ['bin/esg-idp', 'INSTALL', 'README', 'LICENSE']
+    components["esgf-installer"] = ['jar_security_scan', 'globus/esg-globus', 'esg-bootstrap', 'esg-node', 'esg-init', 'esg-functions', 'esg-gitstrap', 'esg-node.completion', 'esg-purge.sh', 'compute-tools/esg-compute-languages', 'compute-tools/esg-compute-tools', 'INSTALL', 'README.md', 'LICENSE']
+    components["esgf-node-manager"] = ['bin/esg-node-manager', 'bin/esgf-sh', 'bin/esgf-spotcheck', 'etc/xsd/registration/registration.xsd', 'INSTALL', 'README', 'LICENSE']
+    components["esgf-security"] = ['bin/esgf-user-migrate', 'bin/esg-security', 'bin/esgf-policy-check', 'INSTALL', 'README', 'LICENSE']
+    components["esg-orp"] = ['bin/esg-orp', 'INSTALL', 'README', 'LICENSE']
+    # components['esgf-getcert'] = ['README', 'LICENSE']
+    components["esg-search"] = ['bin/esg-search', 'bin/esgf-crawl', 'bin/esgf-optimize-index', 'etc/conf/jetty/jetty.xml-auth', 'etc/conf/jetty/realm.properties', 'etc/conf/solr/schema.xml', 'etc/conf/solr/solrconfig.xml', 'etc/conf/solr/solrconfig.xml-replica', 'etc/conf/solr/solr.xml-master', 'etc/conf/solr/solr.xml-slave', 'etc/conf/jetty/webdefault.xml-auth', 'INSTALL', 'README', 'LICENSE']
+    components['esgf-product-server'] = ['esg-product-server']
+    # components["filters"] = ['esg-access-logging-filter', 'esg-drs-resolving-filter', 'esg-security-las-ip-filter', 'esg-security-tokenless-filters']
+    # components["esgf-cog"] = ['esg-cog']
+    # components['esgf-stats-api'] = ['bin/esg_stats-api_v2', 'dist/esgf-stats-api.war']
+    #
+    # #TODO: ???????????????????????????????????????????????????????????
+    #Make separate directories and move these components from esgf-installer to new specific directories
+    # mkdir_p("esgf-product-server")
+    try:
+        shutil.copytree("esgf-installer/product-server/", "esgf-product-server")
+    except OSError, error:
+        shutil.rmtree("esgf-product-server")
+        shutil.copytree("esgf-installer/product-server/", "esgf-product-server")
+    # mkdir_p("filters")
+    # mkdir_p("esgf-cog")
+    # cp esgf-installer/product-server/* esgf-product-server/
+    # cp esgf-installer/cog/esg-cog esgf-cog
+    # cp esgf-installer/filters/* filters/
+
+
     #dist-repos -> esgf_bin
-    build_utilities.mkdir_p('../esgf_bin')
+    if active_branch == "devel":
+        esgf_binary_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist', 'devel')
+    else:
+        esgf_binary_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist')
+    esgf_artifact_directory = os.path.join(starting_directory, 'esgf_bin', 'prod', 'artifacts')
+    #TODO: copy artifacts from ivy cache at {user_name}/.ivy2/local to esgf_artifact_directory
+    build_utilities.mkdir_p(esgf_binary_directory)
+    build_utilities.mkdir_p(esgf_artifact_directory)
     # os.chdir('esgf_tarballs')
     #goes to each tarball listed in the tarballs directory
     for component in components.keys():
-        build_utilities.mkdir_p("../esgf_bin/{component}".format(component=component))
+        component_binary_directory = os.path.join(esgf_binary_directory, component)
+        build_utilities.mkdir_p(component_binary_directory)
         os.chdir(component)
         print "current_directory: ", os.getcwd()
         for file_path in components[component]:
-            shutil.copyfile(file_path, "../esgf_bin/{component}".format(component=component))
+            shutil.copy(file_path, component_binary_directory)
+
+        os.chdir("..")
     # for tarball in os.listdir(os.getcwd()):
     #     #this is used to name each repo in esgf_bin
     #     trgt_dir = tarball.split(".")[0]
