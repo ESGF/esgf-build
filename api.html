@@ -1,0 +1,224 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Build Utilities &#8212; esgf-build 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="ESGF Build process" href="build.html" />
+    <link rel="prev" title="esgf-build API documentation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-build_utilities">
+<span id="build-utilities"></span><h1>Build Utilities<a class="headerlink" href="#module-build_utilities" title="Permalink to this headline">¶</a></h1>
+<p>Utility functions for esgf_build.py</p>
+<dl class="function">
+<dt id="build_utilities.get_md5sum">
+<code class="descclassname">build_utilities.</code><code class="descname">get_md5sum</code><span class="sig-paren">(</span><em>file_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/build_utilities.html#get_md5sum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_utilities.get_md5sum" title="Permalink to this definition">¶</a></dt>
+<dd><p>#Utility function, wraps md5sum so it may be used on either mac or
+#linux machines</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="build_utilities.mkdir_p">
+<code class="descclassname">build_utilities.</code><code class="descname">mkdir_p</code><span class="sig-paren">(</span><em>path</em>, <em>mode=511</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/build_utilities.html#mkdir_p"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_utilities.mkdir_p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Makes directory, passes if directory already exists</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="build_utilities.replace_string_in_file">
+<code class="descclassname">build_utilities.</code><code class="descname">replace_string_in_file</code><span class="sig-paren">(</span><em>file_name</em>, <em>original_string</em>, <em>new_string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/build_utilities.html#replace_string_in_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_utilities.replace_string_in_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Goes into a file and replaces string</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="build_utilities.stream_subprocess_output">
+<code class="descclassname">build_utilities.</code><code class="descname">stream_subprocess_output</code><span class="sig-paren">(</span><em>command_string</em>, <em>file_handle</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/build_utilities.html#stream_subprocess_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_utilities.stream_subprocess_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print out the stdout of the subprocess in real time</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-esgf_build">
+<span id="esgf-build"></span><h1>ESGF Build<a class="headerlink" href="#module-esgf_build" title="Permalink to this headline">¶</a></h1>
+<p>Modules needed mostly to access terminal commands</p>
+<dl class="function">
+<dt id="esgf_build.build_all">
+<code class="descclassname">esgf_build.</code><code class="descname">build_all</code><span class="sig-paren">(</span><em>build_list</em>, <em>starting_directory</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#build_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.build_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a list of repositories to build, and uses ant to build them</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.copy_artifacts_to_local_mirror">
+<code class="descclassname">esgf_build.</code><code class="descname">copy_artifacts_to_local_mirror</code><span class="sig-paren">(</span><em>esgf_artifact_directory</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#copy_artifacts_to_local_mirror"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.copy_artifacts_to_local_mirror" title="Permalink to this definition">¶</a></dt>
+<dd><p>The web artifacts (jars and wars) get placed at
+~/.ivy2/local/esgf-artifacts/ after running the ant builds. This function
+copies them to the local mirror</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.create_build_list">
+<code class="descclassname">esgf_build.</code><code class="descname">create_build_list</code><span class="sig-paren">(</span><em>build_list</em>, <em>select_repo</em>, <em>all_repos_opt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#create_build_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.create_build_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a list of repos to build depending on a menu that the user picks from</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.create_local_mirror_directory">
+<code class="descclassname">esgf_build.</code><code class="descname">create_local_mirror_directory</code><span class="sig-paren">(</span><em>active_branch</em>, <em>starting_directory</em>, <em>build_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#create_local_mirror_directory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.create_local_mirror_directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a directory for ESGF binaries that will get RSynced and uploaded to the remote distribution mirrors</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.create_taglist_file">
+<code class="descclassname">esgf_build.</code><code class="descname">create_taglist_file</code><span class="sig-paren">(</span><em>taglist_file</em>, <em>repo_name</em>, <em>latest_tag</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#create_taglist_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.create_taglist_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a file containing the latest tag for each repo</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.esgf_upload">
+<code class="descclassname">esgf_build.</code><code class="descname">esgf_upload</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#esgf_upload"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.esgf_upload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses rsync to upload to coffee server</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.find_path_to_repos">
+<code class="descclassname">esgf_build.</code><code class="descname">find_path_to_repos</code><span class="sig-paren">(</span><em>starting_directory</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#find_path_to_repos"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.find_path_to_repos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks the path provided to the repos to see if it exists</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.get_latest_tag">
+<code class="descclassname">esgf_build.</code><code class="descname">get_latest_tag</code><span class="sig-paren">(</span><em>repo</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#get_latest_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.get_latest_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>accepts a GitPython Repo object and returns the latest annotated tag</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.get_most_recent_commit">
+<code class="descclassname">esgf_build.</code><code class="descname">get_most_recent_commit</code><span class="sig-paren">(</span><em>repo_handle</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#get_most_recent_commit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.get_most_recent_commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the most recent commit w/ log and list comprehension</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.main">
+<code class="descclassname">esgf_build.</code><code class="descname">main</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#main"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>User prompted for build specifications and functions for build are called</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.set_script_settings">
+<code class="descclassname">esgf_build.</code><code class="descname">set_script_settings</code><span class="sig-paren">(</span><em>default_script_q</em>, <em>script_settings_local</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#set_script_settings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.set_script_settings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the script settings depending on input or default</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.update_all">
+<code class="descclassname">esgf_build.</code><code class="descname">update_all</code><span class="sig-paren">(</span><em>active_branch</em>, <em>repo_directory</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#update_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.update_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks each repo in the REPO_LIST for the most updated branch, and uses
+taglist to track versions</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.update_esg_node">
+<code class="descclassname">esgf_build.</code><code class="descname">update_esg_node</code><span class="sig-paren">(</span><em>active_branch</em>, <em>starting_directory</em>, <em>script_settings_local</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#update_esg_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.update_esg_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates information in esg-node file</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="esgf_build.update_repo">
+<code class="descclassname">esgf_build.</code><code class="descname">update_repo</code><span class="sig-paren">(</span><em>repo_name</em>, <em>repo_object</em>, <em>active_branch</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/esgf_build.html#update_repo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#esgf_build.update_repo" title="Permalink to this definition">¶</a></dt>
+<dd><p>accepts a GitPython Repo object and updates the specified branch</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Build Utilities</a></li>
+<li><a class="reference internal" href="#module-esgf_build">ESGF Build</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">esgf-build API documentation</a></li>
+      <li>Next: <a href="build.html" title="next chapter">ESGF Build process</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/api.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, William Hill.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/api.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

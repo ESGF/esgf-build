@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>esgf-build API documentation &#8212; esgf-build 2.0 documentation</title>
+    <title>ESGF Build process &#8212; esgf-build 2.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -26,7 +26,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Build Utilities" href="api.html" />
+    <link rel="prev" title="Build Utilities" href="api.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -42,30 +42,32 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="esgf-build-api-documentation">
-<h1>esgf-build API documentation<a class="headerlink" href="#esgf-build-api-documentation" title="Permalink to this headline">¶</a></h1>
-<p>esgf-build script is a Python module for building an ESGF distribution. The module contains several scripts that can be used to compile the source code of the various ESGF modules on Github (www.github.com/ESGF) into the distributable binary files.</p>
-<p>ESGF Build process
-There are several steps in building an ESGF distribution.
-1. Fetching the code from Github
-a. There is a function to purge the local repos and fetch fresh copies from Github
-b. Another function can update all local repos listed in the configuration repo list to be in sync with the remote repos.  The user can choose either the devel or master branch to sync.</p>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">API:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="api.html">Build Utilities</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html#module-esgf_build">ESGF Build</a></li>
-<li class="toctree-l1"><a class="reference internal" href="build.html">ESGF Build process</a></li>
-</ul>
-</div>
-</div>
-<div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="esgf-build-process">
+<h1>ESGF Build process<a class="headerlink" href="#esgf-build-process" title="Permalink to this headline">¶</a></h1>
+<p>There are several steps in building an ESGF distribution.</p>
+<ol class="arabic simple">
+<li>Fetching the code from Github</li>
+</ol>
 <ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+<li>There is a function to purge the local repos and fetch fresh copies from Github</li>
+<li>Another function can update all local repos listed in the configuration repo list to be in sync with the remote repos.  The user can choose either the devel or master branch to sync.</li>
 </ul>
+<ol class="arabic simple" start="2">
+<li>Running the build scripts</li>
+</ol>
+<ul class="simple">
+<li>Several of the ESGF subsystems are written in Java and are compiled using Ant.  These subsystem have a build.xml file in their repo that defines the build steps.</li>
+<li>The major build steps in the build.xml file are as follows:<ul>
+<li>clean</li>
+<li>pull</li>
+<li>make_dist</li>
+<li>publish</li>
+</ul>
+</li>
+</ul>
+<ol class="arabic simple" start="3">
+<li></li>
+</ol>
 </div>
 
 
@@ -73,24 +75,18 @@ b. Another function can update all local repos listed in the configuration repo 
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="#">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">esgf-build API documentation</a></li>
-<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
-</ul>
-<div class="relations">
+        <div class="sphinxsidebarwrapper"><div class="relations">
 <h3>Related Topics</h3>
 <ul>
-  <li><a href="#">Documentation overview</a><ul>
-      <li>Next: <a href="api.html" title="next chapter">Build Utilities</a></li>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="api.html" title="previous chapter">Build Utilities</a></li>
   </ul></li>
 </ul>
 </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/index.rst.txt"
+      <li><a href="_sources/build.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -116,7 +112,7 @@ b. Another function can update all local repos listed in the configuration repo 
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="_sources/index.rst.txt"
+      <a href="_sources/build.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
