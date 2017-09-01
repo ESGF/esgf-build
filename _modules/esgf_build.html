@@ -1,0 +1,552 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>esgf_build &#8212; esgf-build 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for esgf_build</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!usr/bin/env python</span>
+<span class="sd">&#39;&#39;&#39;Modules needed mostly to access terminal commands&#39;&#39;&#39;</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">shlex</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">from</span> <span class="nn">distutils.spawn</span> <span class="k">import</span> <span class="n">find_executable</span>
+<span class="kn">import</span> <span class="nn">mmap</span>
+<span class="kn">from</span> <span class="nn">git</span> <span class="k">import</span> <span class="n">Repo</span>
+<span class="kn">import</span> <span class="nn">repo_info</span>
+<span class="kn">import</span> <span class="nn">build_utilities</span>
+
+<span class="c1">######IMPORTANT################################################################</span>
+<span class="c1"># Everything works and is tested up to update node and upload.</span>
+<span class="c1"># Still need to try and eliminate tarballs entirely, eliminate hard-coded</span>
+<span class="c1"># script settings in esg-node, use subprocess to set java and python paths,</span>
+<span class="c1"># remove ivy.xml, etc.</span>
+<span class="c1">#</span>
+<span class="c1"># Current idea was to replace build_list with repo_info.CREATE_DIRECTORY_LIST</span>
+<span class="c1"># in create_local_mirror_directory and create_esgf_tarballs function in order to</span>
+<span class="c1"># set up esgf-installer which is needed in line 162 onward.</span>
+<span class="c1">#</span>
+<span class="c1"># esgf_upload remains un-tested and is a direct copy of the bash script</span>
+<span class="c1"># into a subprocess.</span>
+
+
+<span class="kn">from</span> <span class="nn">git</span> <span class="k">import</span> <span class="n">RemoteProgress</span>
+
+
+<span class="k">class</span> <span class="nc">ProgressPrinter</span><span class="p">(</span><span class="n">RemoteProgress</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">op_code</span><span class="p">,</span> <span class="n">cur_count</span><span class="p">,</span> <span class="n">max_count</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="nb">print</span> <span class="n">op_code</span><span class="p">,</span> <span class="n">cur_count</span><span class="p">,</span> <span class="n">max_count</span><span class="p">,</span> <span class="n">cur_count</span> <span class="o">/</span> <span class="p">(</span><span class="n">max_count</span> <span class="ow">or</span> <span class="mf">100.0</span><span class="p">),</span> <span class="n">message</span> <span class="ow">or</span> <span class="s2">&quot;NO MESSAGE&quot;</span>
+
+
+<div class="viewcode-block" id="get_latest_tag"><a class="viewcode-back" href="../api.html#esgf_build.get_latest_tag">[docs]</a><span class="k">def</span> <span class="nf">get_latest_tag</span><span class="p">(</span><span class="n">repo</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;accepts a GitPython Repo object and returns the latest annotated tag &#39;&#39;&#39;</span>
+    <span class="c1"># provides all the tags, reverses them (so that you can get the latest</span>
+    <span class="c1"># tag) and then takes only the first from the list</span>
+    <span class="n">tag_list</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">tags</span>
+    <span class="n">latest_tag</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">tag_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">latest_tag</span></div>
+
+
+<div class="viewcode-block" id="create_taglist_file"><a class="viewcode-back" href="../api.html#esgf_build.create_taglist_file">[docs]</a><span class="k">def</span> <span class="nf">create_taglist_file</span><span class="p">(</span><span class="n">taglist_file</span><span class="p">,</span> <span class="n">repo_name</span><span class="p">,</span> <span class="n">latest_tag</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Creates a file containing the latest tag for each repo &#39;&#39;&#39;</span>
+    <span class="n">taglist_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;-------------------------</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">taglist_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">repo_name</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">taglist_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;-------------------------</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">taglist_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">latest_tag</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">taglist_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">create_commits_since_last_tag_file</span><span class="p">(</span><span class="n">commits_since_last_tag_file</span><span class="p">,</span> <span class="n">repo_name</span><span class="p">,</span> <span class="n">latest_tag</span><span class="p">):</span>
+    <span class="n">commits_since_tag</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span><span class="n">shlex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span>
+        <span class="s2">&quot;git log </span><span class="si">{latest_tag}</span><span class="s2">..HEAD&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">latest_tag</span><span class="o">=</span><span class="n">latest_tag</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="n">commits_since_tag</span><span class="p">:</span>
+        <span class="nb">print</span> <span class="s2">&quot;There are new commits since the last annotated tag for </span><span class="si">{repo_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">repo_name</span><span class="o">=</span><span class="n">repo_name</span><span class="p">)</span>
+        <span class="nb">print</span> <span class="s2">&quot;See commits_since_last_tag.txt for more details </span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">commits_since_last_tag_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;-------------------------</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">commits_since_last_tag_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Commits since last tag (</span><span class="si">{latest_tag}</span><span class="s2">) for </span><span class="si">{repo_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">latest_tag</span><span class="o">=</span><span class="n">latest_tag</span><span class="p">,</span> <span class="n">repo_name</span><span class="o">=</span><span class="n">repo_name</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">commits_since_last_tag_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;-------------------------</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">commits_since_last_tag_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">commits_since_tag</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="update_repo"><a class="viewcode-back" href="../api.html#esgf_build.update_repo">[docs]</a><span class="k">def</span> <span class="nf">update_repo</span><span class="p">(</span><span class="n">repo_name</span><span class="p">,</span> <span class="n">repo_object</span><span class="p">,</span> <span class="n">active_branch</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; accepts a GitPython Repo object and updates the specified branch &#39;&#39;&#39;</span>
+    <span class="nb">print</span> <span class="s2">&quot;Checkout </span><span class="si">{repo_name}</span><span class="s2">&#39;s </span><span class="si">{active_branch}</span><span class="s2"> branch&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">repo_name</span><span class="o">=</span><span class="n">repo_name</span><span class="p">,</span> <span class="n">active_branch</span><span class="o">=</span><span class="n">active_branch</span><span class="p">)</span>
+    <span class="n">repo_object</span><span class="o">.</span><span class="n">git</span><span class="o">.</span><span class="n">checkout</span><span class="p">(</span><span class="n">active_branch</span><span class="p">)</span>
+    <span class="n">progress_printer</span> <span class="o">=</span> <span class="n">ProgressPrinter</span><span class="p">()</span>
+    <span class="n">repo_object</span><span class="o">.</span><span class="n">remotes</span><span class="o">.</span><span class="n">origin</span><span class="o">.</span><span class="n">pull</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{active_branch}</span><span class="s2">:</span><span class="si">{active_branch}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">active_branch</span><span class="o">=</span><span class="n">active_branch</span><span class="p">),</span> <span class="n">progress</span><span class="o">=</span><span class="n">progress_printer</span><span class="p">)</span>
+    <span class="nb">print</span> <span class="s2">&quot;Updating: &quot;</span> <span class="o">+</span> <span class="n">repo_name</span></div>
+
+
+<div class="viewcode-block" id="update_all"><a class="viewcode-back" href="../api.html#esgf_build.update_all">[docs]</a><span class="k">def</span> <span class="nf">update_all</span><span class="p">(</span><span class="n">active_branch</span><span class="p">,</span> <span class="n">repo_directory</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Checks each repo in the REPO_LIST for the most updated branch, and uses</span>
+<span class="sd">    taglist to track versions &#39;&#39;&#39;</span>
+    <span class="nb">print</span> <span class="s2">&quot;Beginning to update directories.&quot;</span>
+
+    <span class="n">commits_since_last_tag_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="n">repo_directory</span><span class="p">,</span> <span class="s2">&quot;commits_since_last_tag.txt&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
+    <span class="n">taglist_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">repo_directory</span><span class="p">,</span> <span class="s2">&quot;taglist.txt&quot;</span><span class="p">),</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">repo</span> <span class="ow">in</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">REPO_LIST</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">repo_directory</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">repo</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="s2">&quot;Directory for </span><span class="si">{repo}</span><span class="s2"> does not exist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">repo</span><span class="o">=</span><span class="n">repo</span><span class="p">)</span>
+
+        <span class="n">repo_handle</span> <span class="o">=</span> <span class="n">Repo</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">())</span>
+        <span class="n">update_repo</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">repo_handle</span><span class="p">,</span> <span class="n">active_branch</span><span class="p">)</span>
+
+        <span class="n">latest_tag</span> <span class="o">=</span> <span class="n">get_latest_tag</span><span class="p">(</span><span class="n">repo_handle</span><span class="p">)</span>
+        <span class="n">create_taglist_file</span><span class="p">(</span><span class="n">taglist_file</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">latest_tag</span><span class="p">)</span>
+
+        <span class="n">create_commits_since_last_tag_file</span><span class="p">(</span><span class="n">commits_since_last_tag_file</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">latest_tag</span><span class="p">)</span>
+
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s2">&quot;..&quot;</span><span class="p">)</span>
+
+    <span class="n">taglist_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">commits_since_last_tag_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="nb">print</span> <span class="s2">&quot;Directory updates complete.&quot;</span></div>
+
+
+<div class="viewcode-block" id="build_all"><a class="viewcode-back" href="../api.html#esgf_build.build_all">[docs]</a><span class="k">def</span> <span class="nf">build_all</span><span class="p">(</span><span class="n">build_list</span><span class="p">,</span> <span class="n">starting_directory</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Takes a list of repositories to build, and uses ant to build them &#39;&#39;&#39;</span>
+    <span class="c1"># TODO: use subprocess w/ bash command to set the java and python paths</span>
+    <span class="c1"># TODO: add loading bar while ant runs?</span>
+    <span class="c1"># TODO: include installer in build script for final version</span>
+    <span class="c1"># TODO: Remove ivy.xml directory?</span>
+    <span class="n">ant_path</span> <span class="o">=</span> <span class="n">find_executable</span><span class="p">(</span><span class="s1">&#39;ant&#39;</span><span class="p">)</span>
+    <span class="c1">#java_path = find_executable(&#39;java&#39;)</span>
+    <span class="c1">#python_path = find_executable(&#39;python&#39;)</span>
+
+    <span class="n">log_directory</span> <span class="o">=</span> <span class="n">starting_directory</span> <span class="o">+</span> <span class="s2">&quot;/buildlogs&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">log_directory</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">log_directory</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">repo</span> <span class="ow">in</span> <span class="n">build_list</span><span class="p">:</span>
+        <span class="nb">print</span> <span class="s2">&quot;Building repo: &quot;</span> <span class="o">+</span> <span class="n">repo</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">starting_directory</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">repo</span><span class="p">)</span>
+
+        <span class="c1"># repos getcert and stats-api do not need an ant pull call</span>
+        <span class="k">if</span> <span class="n">repo</span> <span class="o">==</span> <span class="s1">&#39;esgf-getcert&#39;</span><span class="p">:</span>
+            <span class="c1">#clean and dist only</span>
+            <span class="n">clean_log</span> <span class="o">=</span> <span class="n">log_directory</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">repo</span> <span class="o">+</span> <span class="s2">&quot;-clean.log&quot;</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">clean_log</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fgc1</span><span class="p">:</span>
+                <span class="n">build_utilities</span><span class="o">.</span><span class="n">stream_subprocess_output</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{ant}</span><span class="s1"> clean&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ant</span><span class="o">=</span><span class="n">ant_path</span><span class="p">),</span> <span class="n">fgc1</span><span class="p">)</span>
+            <span class="n">build_log</span> <span class="o">=</span> <span class="n">log_directory</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">repo</span> <span class="o">+</span> <span class="s2">&quot;-build.log&quot;</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">build_log</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fgc2</span><span class="p">:</span>
+                <span class="n">build_utilities</span><span class="o">.</span><span class="n">stream_subprocess_output</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{ant}</span><span class="s1"> dist&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ant</span><span class="o">=</span><span class="n">ant_path</span><span class="p">),</span> <span class="n">fgc2</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s2">&quot;..&quot;</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="n">repo</span> <span class="o">==</span> <span class="s1">&#39;esgf-stats-api&#39;</span><span class="p">:</span>
+            <span class="c1">#clean and make_dist only</span>
+            <span class="n">clean_log</span> <span class="o">=</span> <span class="n">log_directory</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">repo</span> <span class="o">+</span> <span class="s2">&quot;-clean.log&quot;</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">clean_log</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fsapi1</span><span class="p">:</span>
+                <span class="n">build_utilities</span><span class="o">.</span><span class="n">stream_subprocess_output</span><span class="p">(</span>
+                    <span class="s1">&#39;</span><span class="si">{ant}</span><span class="s1"> clean_all&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ant</span><span class="o">=</span><span class="n">ant_path</span><span class="p">),</span> <span class="n">fsapi1</span><span class="p">)</span>
+            <span class="n">build_log</span> <span class="o">=</span> <span class="n">log_directory</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">repo</span> <span class="o">+</span> <span class="s2">&quot;-build.log&quot;</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">build_log</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fsapi2</span><span class="p">:</span>
+                <span class="n">build_utilities</span><span class="o">.</span><span class="n">stream_subprocess_output</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="si">{ant}</span><span class="s2"> make_dist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ant</span><span class="o">=</span><span class="n">ant_path</span><span class="p">),</span> <span class="n">fsapi2</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;..&#39;</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="c1">#clean, build, and make_dist</span>
+        <span class="c1">#TODO: Add publish step</span>
+        <span class="n">clean_log</span> <span class="o">=</span> <span class="n">log_directory</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">repo</span> <span class="o">+</span> <span class="s2">&quot;-clean.log&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">clean_log</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file1</span><span class="p">:</span>
+            <span class="n">build_utilities</span><span class="o">.</span><span class="n">stream_subprocess_output</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{ant}</span><span class="s1"> clean_all&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ant</span><span class="o">=</span><span class="n">ant_path</span><span class="p">),</span> <span class="n">file1</span><span class="p">)</span>
+        <span class="n">pull_log</span> <span class="o">=</span> <span class="n">log_directory</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">repo</span> <span class="o">+</span> <span class="s2">&quot;-pull.log&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pull_log</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file2</span><span class="p">:</span>
+            <span class="n">build_utilities</span><span class="o">.</span><span class="n">stream_subprocess_output</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{ant}</span><span class="s1"> pull&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ant</span><span class="o">=</span><span class="n">ant_path</span><span class="p">),</span> <span class="n">file2</span><span class="p">)</span>
+        <span class="n">build_log</span> <span class="o">=</span> <span class="n">log_directory</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">repo</span> <span class="o">+</span> <span class="s2">&quot;-build.log&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">build_log</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file3</span><span class="p">:</span>
+            <span class="n">build_utilities</span><span class="o">.</span><span class="n">stream_subprocess_output</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{ant}</span><span class="s2"> make_dist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ant</span><span class="o">=</span><span class="n">ant_path</span><span class="p">),</span> <span class="n">file3</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s2">&quot;..&quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Repository builds complete.&quot;</span>
+
+    <span class="c1">#TODO: extract to separate function</span>
+    <span class="c1">#TODO: list clean, pull, and publish logs as well</span>
+    <span class="nb">print</span> <span class="s2">&quot;Finding esgf log files.</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+    <span class="c1"># uses glob to find all esgf log files then iterates over the log files ,</span>
+    <span class="c1"># opens them and uses a mmap object to search through for BUILD reference</span>
+    <span class="c1"># returns the ones with BUILD references to be checked by a script during build</span>
+    <span class="n">all_logs</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;buildlogs/esg*-*-build.log&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">log</span> <span class="ow">in</span> <span class="n">all_logs</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">log</span><span class="p">)</span> <span class="k">as</span> <span class="n">flog</span><span class="p">:</span>
+            <span class="n">mmap_object</span> <span class="o">=</span> <span class="n">mmap</span><span class="o">.</span><span class="n">mmap</span><span class="p">(</span><span class="n">flog</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">access</span><span class="o">=</span><span class="n">mmap</span><span class="o">.</span><span class="n">ACCESS_READ</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">mmap_object</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;BUILD&#39;</span><span class="p">)</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">log</span></div>
+
+
+<div class="viewcode-block" id="copy_artifacts_to_local_mirror"><a class="viewcode-back" href="../api.html#esgf_build.copy_artifacts_to_local_mirror">[docs]</a><span class="k">def</span> <span class="nf">copy_artifacts_to_local_mirror</span><span class="p">(</span><span class="n">esgf_artifact_directory</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; The web artifacts (jars and wars) get placed at</span>
+<span class="sd">    ~/.ivy2/local/esgf-artifacts/ after running the ant builds. This function</span>
+<span class="sd">    copies them to the local mirror&#39;&#39;&#39;</span>
+    <span class="n">local_artifacts_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;HOME&quot;</span><span class="p">],</span> <span class="s2">&quot;.ivy2&quot;</span><span class="p">,</span> <span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="s2">&quot;esgf-artifacts&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="n">local_artifacts_directory</span><span class="p">,</span> <span class="n">esgf_artifact_directory</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">esgf_artifact_directory</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="n">local_artifacts_directory</span><span class="p">,</span> <span class="n">esgf_artifact_directory</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="create_local_mirror_directory"><a class="viewcode-back" href="../api.html#esgf_build.create_local_mirror_directory">[docs]</a><span class="k">def</span> <span class="nf">create_local_mirror_directory</span><span class="p">(</span><span class="n">active_branch</span><span class="p">,</span> <span class="n">starting_directory</span><span class="p">,</span> <span class="n">build_list</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Creates a directory for ESGF binaries that will get RSynced and uploaded to the remote distribution mirrors&#39;&#39;&#39;</span>
+    <span class="c1"># if active_branch is devel then copy to dist folder for devel</span>
+    <span class="c1"># if active_branch is master then copy to dist folder</span>
+    <span class="nb">print</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Creating local mirrror directory.&quot;</span>
+    <span class="nb">print</span> <span class="s2">&quot;starting_directory:&quot;</span><span class="p">,</span> <span class="n">starting_directory</span>
+    <span class="n">components</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">components</span><span class="p">[</span><span class="s2">&quot;esgf-dashboard&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;bin/esg-dashboard&#39;</span><span class="p">,</span>
+                                    <span class="s1">&#39;dist/esgf_dashboard-0.0.0-py2.7.egg&#39;</span><span class="p">,</span> <span class="s1">&#39;INSTALL&#39;</span><span class="p">,</span> <span class="s1">&#39;README&#39;</span><span class="p">,</span> <span class="s1">&#39;LICENSE&#39;</span><span class="p">]</span>
+    <span class="n">components</span><span class="p">[</span><span class="s2">&quot;esgf-idp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;bin/esg-idp&#39;</span><span class="p">,</span> <span class="s1">&#39;INSTALL&#39;</span><span class="p">,</span> <span class="s1">&#39;README&#39;</span><span class="p">,</span> <span class="s1">&#39;LICENSE&#39;</span><span class="p">]</span>
+    <span class="n">components</span><span class="p">[</span><span class="s2">&quot;esgf-installer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;jar_security_scan&#39;</span><span class="p">,</span> <span class="s1">&#39;globus/esg-globus&#39;</span><span class="p">,</span> <span class="s1">&#39;esg-bootstrap&#39;</span><span class="p">,</span> <span class="s1">&#39;esg-node&#39;</span><span class="p">,</span> <span class="s1">&#39;esg-init&#39;</span><span class="p">,</span> <span class="s1">&#39;esg-functions&#39;</span><span class="p">,</span> <span class="s1">&#39;esg-gitstrap&#39;</span><span class="p">,</span>
+                                    <span class="s1">&#39;esg-node.completion&#39;</span><span class="p">,</span> <span class="s1">&#39;esg-purge.sh&#39;</span><span class="p">,</span> <span class="s1">&#39;compute-tools/esg-compute-languages&#39;</span><span class="p">,</span> <span class="s1">&#39;compute-tools/esg-compute-tools&#39;</span><span class="p">,</span> <span class="s1">&#39;INSTALL&#39;</span><span class="p">,</span> <span class="s1">&#39;README.md&#39;</span><span class="p">,</span> <span class="s1">&#39;LICENSE&#39;</span><span class="p">]</span>
+    <span class="n">components</span><span class="p">[</span><span class="s2">&quot;esgf-node-manager&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;bin/esg-node-manager&#39;</span><span class="p">,</span> <span class="s1">&#39;bin/esgf-sh&#39;</span><span class="p">,</span> <span class="s1">&#39;bin/esgf-spotcheck&#39;</span><span class="p">,</span>
+                                       <span class="s1">&#39;etc/xsd/registration/registration.xsd&#39;</span><span class="p">,</span> <span class="s1">&#39;INSTALL&#39;</span><span class="p">,</span> <span class="s1">&#39;README&#39;</span><span class="p">,</span> <span class="s1">&#39;LICENSE&#39;</span><span class="p">]</span>
+    <span class="n">components</span><span class="p">[</span><span class="s2">&quot;esgf-security&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;bin/esgf-user-migrate&#39;</span><span class="p">,</span> <span class="s1">&#39;bin/esg-security&#39;</span><span class="p">,</span>
+                                   <span class="s1">&#39;bin/esgf-policy-check&#39;</span><span class="p">,</span> <span class="s1">&#39;INSTALL&#39;</span><span class="p">,</span> <span class="s1">&#39;README&#39;</span><span class="p">,</span> <span class="s1">&#39;LICENSE&#39;</span><span class="p">]</span>
+    <span class="n">components</span><span class="p">[</span><span class="s2">&quot;esg-orp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;bin/esg-orp&#39;</span><span class="p">,</span> <span class="s1">&#39;INSTALL&#39;</span><span class="p">,</span> <span class="s1">&#39;README&#39;</span><span class="p">,</span> <span class="s1">&#39;LICENSE&#39;</span><span class="p">]</span>
+    <span class="c1"># components[&#39;esgf-getcert&#39;] = [&#39;README&#39;, &#39;LICENSE&#39;]</span>
+    <span class="n">components</span><span class="p">[</span><span class="s2">&quot;esg-search&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;bin/esg-search&#39;</span><span class="p">,</span> <span class="s1">&#39;bin/esgf-crawl&#39;</span><span class="p">,</span> <span class="s1">&#39;bin/esgf-optimize-index&#39;</span><span class="p">,</span> <span class="s1">&#39;etc/conf/jetty/jetty.xml-auth&#39;</span><span class="p">,</span>
+                                <span class="s1">&#39;etc/conf/jetty/realm.properties&#39;</span><span class="p">,</span> <span class="s1">&#39;etc/conf/jetty/webdefault.xml-auth&#39;</span><span class="p">,</span> <span class="s1">&#39;INSTALL&#39;</span><span class="p">,</span> <span class="s1">&#39;README&#39;</span><span class="p">,</span> <span class="s1">&#39;LICENSE&#39;</span><span class="p">]</span>
+    <span class="n">components</span><span class="p">[</span><span class="s1">&#39;esgf-product-server&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;esg-product-server&#39;</span><span class="p">]</span>
+    <span class="n">components</span><span class="p">[</span><span class="s2">&quot;filters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;esg-access-logging-filter&#39;</span><span class="p">,</span> <span class="s1">&#39;esg-drs-resolving-filter&#39;</span><span class="p">,</span>
+                             <span class="s1">&#39;esg-security-las-ip-filter&#39;</span><span class="p">,</span> <span class="s1">&#39;esg-security-tokenless-filters&#39;</span><span class="p">]</span>
+    <span class="n">components</span><span class="p">[</span><span class="s2">&quot;esgf-cog&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;esg-cog&#39;</span><span class="p">]</span>
+    <span class="c1"># components[&#39;esgf-stats-api&#39;] = [&#39;bin/esg_stats-api_v2&#39;, &#39;dist/esgf-stats-api.war&#39;]</span>
+
+    <span class="c1"># Make separate directories and move these components from esgf-installer to new specific directories</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="s2">&quot;esgf-installer/product-server/&quot;</span><span class="p">,</span> <span class="s2">&quot;esgf-product-server&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="s2">&quot;esgf-product-server&quot;</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="s2">&quot;esgf-installer/product-server/&quot;</span><span class="p">,</span> <span class="s2">&quot;esgf-product-server&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="s2">&quot;esgf-installer/filters/&quot;</span><span class="p">,</span> <span class="s2">&quot;filters&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="s2">&quot;filters&quot;</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="s2">&quot;esgf-installer/filters/&quot;</span><span class="p">,</span> <span class="s2">&quot;filters&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="s2">&quot;esgf-installer/cog/&quot;</span><span class="p">,</span> <span class="s2">&quot;esgf-cog&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="s2">&quot;esgf-cog&quot;</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="s2">&quot;esgf-installer/cog/&quot;</span><span class="p">,</span> <span class="s2">&quot;esgf-cog&quot;</span><span class="p">)</span>
+
+    <span class="c1"># dist-repos -&gt; esgf_bin</span>
+    <span class="k">if</span> <span class="n">active_branch</span> <span class="o">==</span> <span class="s2">&quot;devel&quot;</span><span class="p">:</span>
+        <span class="n">esgf_binary_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="n">starting_directory</span><span class="p">,</span> <span class="s1">&#39;esgf_bin&#39;</span><span class="p">,</span> <span class="s1">&#39;prod&#39;</span><span class="p">,</span> <span class="s1">&#39;dist&#39;</span><span class="p">,</span> <span class="s1">&#39;devel&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">esgf_binary_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">starting_directory</span><span class="p">,</span> <span class="s1">&#39;esgf_bin&#39;</span><span class="p">,</span> <span class="s1">&#39;prod&#39;</span><span class="p">,</span> <span class="s1">&#39;dist&#39;</span><span class="p">)</span>
+    <span class="n">esgf_artifact_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">starting_directory</span><span class="p">,</span> <span class="s1">&#39;esgf_bin&#39;</span><span class="p">,</span> <span class="s1">&#39;prod&#39;</span><span class="p">,</span> <span class="s1">&#39;artifacts&#39;</span><span class="p">)</span>
+
+    <span class="n">build_utilities</span><span class="o">.</span><span class="n">mkdir_p</span><span class="p">(</span><span class="n">esgf_binary_directory</span><span class="p">)</span>
+    <span class="n">build_utilities</span><span class="o">.</span><span class="n">mkdir_p</span><span class="p">(</span><span class="n">esgf_artifact_directory</span><span class="p">)</span>
+
+    <span class="n">copy_artifacts_to_local_mirror</span><span class="p">(</span><span class="n">esgf_artifact_directory</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="n">components</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">component_binary_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">esgf_binary_directory</span><span class="p">,</span> <span class="n">component</span><span class="p">)</span>
+        <span class="n">build_utilities</span><span class="o">.</span><span class="n">mkdir_p</span><span class="p">(</span><span class="n">component_binary_directory</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
+        <span class="nb">print</span> <span class="s2">&quot;current_directory: &quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="n">components</span><span class="p">[</span><span class="n">component</span><span class="p">]:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">component_binary_directory</span><span class="p">)</span>
+
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s2">&quot;..&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="update_esg_node"><a class="viewcode-back" href="../api.html#esgf_build.update_esg_node">[docs]</a><span class="k">def</span> <span class="nf">update_esg_node</span><span class="p">(</span><span class="n">active_branch</span><span class="p">,</span> <span class="n">starting_directory</span><span class="p">,</span> <span class="n">script_settings_local</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Updates information in esg-node file&#39;&#39;&#39;</span>
+    <span class="c1"># TODO: in the future, remove hard-coded script settings from esgf-node</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s2">&quot;../esgf-installer&quot;</span><span class="p">)</span>
+    <span class="n">src_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+    <span class="n">repo_handle</span> <span class="o">=</span> <span class="n">Repo</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">())</span>
+    <span class="n">repo_handle</span><span class="o">.</span><span class="n">git</span><span class="o">.</span><span class="n">checkout</span><span class="p">(</span><span class="n">active_branch</span><span class="p">)</span>
+    <span class="n">repo_handle</span><span class="o">.</span><span class="n">remotes</span><span class="o">.</span><span class="n">origin</span><span class="o">.</span><span class="n">pull</span><span class="p">()</span>
+
+    <span class="n">get_most_recent_commit</span><span class="p">(</span><span class="n">repo_handle</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">active_branch</span> <span class="o">==</span> <span class="s1">&#39;devel&#39;</span><span class="p">:</span>
+        <span class="n">installer_dir</span> <span class="o">=</span> <span class="p">(</span><span class="n">starting_directory</span>
+                         <span class="o">+</span> <span class="s1">&#39;/esgf_bin/prod/dist/devel/esgf-installer/&#39;</span>
+                         <span class="o">+</span> <span class="n">script_settings_local</span><span class="p">[</span><span class="s1">&#39;script_major_version&#39;</span><span class="p">])</span>
+        <span class="n">last_push_dir</span> <span class="o">=</span> <span class="p">(</span><span class="n">starting_directory</span> <span class="o">+</span> <span class="s1">&#39;/dist-repos/prod/dist/devel&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">installer_dir</span> <span class="o">=</span> <span class="p">(</span><span class="n">starting_directory</span>
+                         <span class="o">+</span> <span class="s1">&#39;/esgf_bin/prod/dist/esgf-installer/&#39;</span>
+                         <span class="o">+</span> <span class="n">script_settings_local</span><span class="p">[</span><span class="s1">&#39;script_major_version&#39;</span><span class="p">])</span>
+        <span class="n">last_push_dir</span> <span class="o">=</span> <span class="p">(</span><span class="n">starting_directory</span> <span class="o">+</span> <span class="s1">&#39;/dist-repos/prod/dist&#39;</span><span class="p">)</span>
+
+    <span class="n">replace_script_maj_version</span> <span class="o">=</span> <span class="s1">&#39;2.0&#39;</span>
+    <span class="n">replace_release</span> <span class="o">=</span> <span class="s1">&#39;Centaur&#39;</span>
+    <span class="n">replace_version</span> <span class="o">=</span> <span class="s1">&#39;v2.0-RC5.4.0-devel&#39;</span>
+
+    <span class="nb">print</span> <span class="s2">&quot;Updating node with script versions.&quot;</span>
+    <span class="n">build_utilities</span><span class="o">.</span><span class="n">replace_string_in_file</span><span class="p">(</span><span class="s1">&#39;esg-node&#39;</span><span class="p">,</span> <span class="n">replace_script_maj_version</span><span class="p">,</span>
+                                           <span class="n">script_settings_local</span><span class="p">[</span><span class="s1">&#39;script_major_version&#39;</span><span class="p">])</span>
+    <span class="n">build_utilities</span><span class="o">.</span><span class="n">replace_string_in_file</span><span class="p">(</span>
+        <span class="s1">&#39;esg-node&#39;</span><span class="p">,</span> <span class="n">replace_release</span><span class="p">,</span> <span class="n">script_settings_local</span><span class="p">[</span><span class="s1">&#39;script_release&#39;</span><span class="p">])</span>
+    <span class="n">build_utilities</span><span class="o">.</span><span class="n">replace_string_in_file</span><span class="p">(</span>
+        <span class="s1">&#39;esg-node&#39;</span><span class="p">,</span> <span class="n">replace_version</span><span class="p">,</span> <span class="n">script_settings_local</span><span class="p">[</span><span class="s1">&#39;script_version&#39;</span><span class="p">])</span>
+
+    <span class="nb">print</span> <span class="s2">&quot;Copying esg-init and auto-installer.&quot;</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="n">src_dir</span> <span class="o">+</span> <span class="s2">&quot;/esg-init&quot;</span><span class="p">,</span> <span class="n">installer_dir</span> <span class="o">+</span> <span class="s2">&quot;/esg-init&quot;</span><span class="p">)</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="n">src_dir</span> <span class="o">+</span> <span class="s2">&quot;/setup-autoinstall&quot;</span><span class="p">,</span> <span class="n">installer_dir</span> <span class="o">+</span> <span class="s2">&quot;/setup-autoinstall&quot;</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;esg-init.md5&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file1</span><span class="p">:</span>
+        <span class="n">file1</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">build_utilities</span><span class="o">.</span><span class="n">get_md5sum</span><span class="p">(</span><span class="s1">&#39;esg-init&#39;</span><span class="p">))</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;esg-node.md5&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file1</span><span class="p">:</span>
+        <span class="n">file1</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">build_utilities</span><span class="o">.</span><span class="n">get_md5sum</span><span class="p">(</span><span class="s1">&#39;esg-node&#39;</span><span class="p">))</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;esg-autoinstall.md5&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file1</span><span class="p">:</span>
+        <span class="n">file1</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">build_utilities</span><span class="o">.</span><span class="n">get_md5sum</span><span class="p">(</span><span class="s1">&#39;esg-autoinstall&#39;</span><span class="p">))</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">last_push_dir</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;lastpush.md5&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file1</span><span class="p">:</span>
+        <span class="n">file1</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">build_utilities</span><span class="o">.</span><span class="n">get_md5sum</span><span class="p">(</span><span class="n">last_push_dir</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="esgf_upload"><a class="viewcode-back" href="../api.html#esgf_build.esgf_upload">[docs]</a><span class="k">def</span> <span class="nf">esgf_upload</span><span class="p">():</span>
+    <span class="sd">&#39;&#39;&#39;Uses rsync to upload to coffee server&#39;&#39;&#39;</span>
+    <span class="c1"># use rsync to upload</span>
+    <span class="nb">print</span> <span class="s2">&quot;Beginning upload.&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;esgfupload.log&#39;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file1</span><span class="p">:</span>
+        <span class="n">build_utilities</span><span class="o">.</span><span class="n">stream_subprocess_output</span><span class="p">(</span><span class="s2">&quot;rsync -arWvu dist-repos/prod/ -e ssh --delete&quot;</span>
+                                                 <span class="o">/</span> <span class="s2">&quot; esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/&quot;</span>
+                                                 <span class="o">/</span> <span class="s2">&quot;2&gt;&amp;1 |tee esgfupload.log&quot;</span><span class="p">,</span> <span class="n">file1</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;esgfupload.log&#39;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file1</span><span class="p">:</span>
+        <span class="n">build_utilities</span><span class="o">.</span><span class="n">stream_subprocess_output</span><span class="p">(</span><span class="s2">&quot;rsync -arWvunO dist-repos/prod/ -e ssh --delete&quot;</span>
+                                                 <span class="o">/</span> <span class="s2">&quot;esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/&quot;</span>
+                                                 <span class="o">/</span> <span class="s2">&quot; 2&gt;&amp;1 |tee esgfupload.log&quot;</span><span class="p">,</span> <span class="n">file1</span><span class="p">)</span>
+    <span class="nb">print</span> <span class="s2">&quot;Upload completed!&quot;</span></div>
+
+
+<div class="viewcode-block" id="create_build_list"><a class="viewcode-back" href="../api.html#esgf_build.create_build_list">[docs]</a><span class="k">def</span> <span class="nf">create_build_list</span><span class="p">(</span><span class="n">build_list</span><span class="p">,</span> <span class="n">select_repo</span><span class="p">,</span> <span class="n">all_repos_opt</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Creates a list of repos to build depending on a menu that the user picks from&#39;&#39;&#39;</span>
+
+    <span class="c1"># If the user has indicated that all repos should be built, then the repos</span>
+    <span class="c1"># from the repo list in repo info is purged of exclusions and set as the build_list</span>
+    <span class="k">if</span> <span class="n">all_repos_opt</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">build_list</span> <span class="o">=</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">REPO_LIST</span>
+        <span class="k">for</span> <span class="n">repo</span> <span class="ow">in</span> <span class="n">build_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">repo</span> <span class="ow">in</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">REPOS_TO_EXCLUDE</span><span class="p">:</span>
+                <span class="nb">print</span> <span class="s2">&quot;EXCLUSION FOUND: &quot;</span> <span class="o">+</span> <span class="n">repo</span>
+                <span class="n">build_list</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">repo</span><span class="p">)</span>
+                <span class="k">continue</span>
+        <span class="nb">print</span> <span class="s2">&quot;Building repos: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">build_list</span><span class="p">)</span>
+        <span class="nb">print</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">return</span>
+
+    <span class="c1"># If the user has selcted the repos to build, the indexes are used to select</span>
+    <span class="c1"># the repo names from the menu , any selected repos on the exclusion list are</span>
+    <span class="c1"># purged, and the rest are appened to the build_list</span>
+    <span class="n">select_repo</span> <span class="o">=</span> <span class="n">select_repo</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+    <span class="n">select_repo</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">select_repo</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">repo_num</span> <span class="ow">in</span> <span class="n">select_repo</span><span class="p">:</span>
+        <span class="n">repo_name</span> <span class="o">=</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">REPO_LIST</span><span class="p">[</span><span class="n">repo_num</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">repo_name</span> <span class="ow">in</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">REPOS_TO_EXCLUDE</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="s2">&quot;EXCLUSION FOUND: &quot;</span> <span class="o">+</span> <span class="n">repo_name</span>
+            <span class="k">continue</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">build_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">repo_name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">build_list</span><span class="p">:</span>
+        <span class="nb">print</span> <span class="s2">&quot;No applicable repos selected.&quot;</span>
+        <span class="n">exit</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span> <span class="s2">&quot;Building repos: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">build_list</span><span class="p">)</span>
+        <span class="nb">print</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span></div>
+
+
+<div class="viewcode-block" id="set_script_settings"><a class="viewcode-back" href="../api.html#esgf_build.set_script_settings">[docs]</a><span class="k">def</span> <span class="nf">set_script_settings</span><span class="p">(</span><span class="n">default_script_q</span><span class="p">,</span> <span class="n">script_settings_local</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Sets the script settings depending on input or default&#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">default_script_q</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;yes&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]:</span>
+        <span class="n">script_settings_local</span><span class="p">[</span><span class="s1">&#39;script_major_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;Please set the&quot;</span>
+                                                                  <span class="o">+</span> <span class="s2">&quot; script_major_version: &quot;</span><span class="p">)</span>
+        <span class="n">script_settings_local</span><span class="p">[</span><span class="s1">&#39;script_release&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;Please set the script_release: &quot;</span><span class="p">)</span>
+        <span class="n">script_settings_local</span><span class="p">[</span><span class="s1">&#39;script_version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;Please set the script version: &quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">script_settings_local</span>
+    <span class="nb">print</span> <span class="s2">&quot;Using default script settings.&quot;</span>
+    <span class="k">return</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">SCRIPT_INFO</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="find_path_to_repos"><a class="viewcode-back" href="../api.html#esgf_build.find_path_to_repos">[docs]</a><span class="k">def</span> <span class="nf">find_path_to_repos</span><span class="p">(</span><span class="n">starting_directory</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Checks the path provided to the repos to see if it exists&#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">starting_directory</span><span class="p">)):</span>
+        <span class="n">starting_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">starting_directory</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">create_path_q</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;The path does not exist. Do you want &quot;</span>
+                              <span class="o">+</span> <span class="n">starting_directory</span>
+                              <span class="o">+</span> <span class="s2">&quot; to be created? (Y or YES)&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">create_path_q</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;yes&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]:</span>
+        <span class="nb">print</span> <span class="s2">&quot;Not a valid response. Directory not created.&quot;</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">starting_directory</span><span class="p">)</span>
+    <span class="n">starting_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">starting_directory</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="get_most_recent_commit"><a class="viewcode-back" href="../api.html#esgf_build.get_most_recent_commit">[docs]</a><span class="k">def</span> <span class="nf">get_most_recent_commit</span><span class="p">(</span><span class="n">repo_handle</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Gets the most recent commit w/ log and list comprehension&#39;&#39;&#39;</span>
+    <span class="n">repo_handle</span><span class="o">.</span><span class="n">git</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
+    <span class="n">mst_rcnt_cmmt</span> <span class="o">=</span> <span class="n">repo_handle</span><span class="o">.</span><span class="n">git</span><span class="o">.</span><span class="n">log</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">commit&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">mst_rcnt_cmmt</span></div>
+
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../api.html#esgf_build.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="sd">&#39;&#39;&#39;User prompted for build specifications and functions for build are called&#39;&#39;&#39;</span>
+    <span class="n">build_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">select_repo</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">script_settings_local</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">active_branch</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;Do you want to update devel or master branch? &quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">active_branch</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;devel&quot;</span><span class="p">,</span> <span class="s2">&quot;master&quot;</span><span class="p">]:</span>
+            <span class="nb">print</span> <span class="s2">&quot;Please choose either master or devel.&quot;</span>
+            <span class="k">continue</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">break</span>
+
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">starting_directory</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;Please provide the path to the&quot;</span> <span class="o">+</span>
+                                       <span class="s2">&quot; repositories on your system: &quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">find_path_to_repos</span><span class="p">(</span><span class="n">starting_directory</span><span class="p">):</span>
+            <span class="k">break</span>
+
+    <span class="n">update_all</span><span class="p">(</span><span class="n">active_branch</span><span class="p">,</span> <span class="n">starting_directory</span><span class="p">)</span>
+
+    <span class="c1"># Use a raw_input statement to ask which repos should be built, then call</span>
+    <span class="c1"># the create_build_list with all_repos_opt set to either True or False</span>
+    <span class="nb">print</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">REPO_MENU</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">select_repo</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;Which repositories will be built? (Hit [Enter] for all) &quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">select_repo</span><span class="p">:</span>
+            <span class="n">all_repo_q</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;Do you want to build all repositories? (Y or YES) &quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">all_repo_q</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;yes&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">]:</span>
+                <span class="nb">print</span> <span class="s2">&quot;Not a valid response.&quot;</span>
+                <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">create_build_list</span><span class="p">(</span><span class="n">build_list</span><span class="p">,</span> <span class="n">select_repo</span><span class="p">,</span> <span class="n">all_repos_opt</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">create_build_list</span><span class="p">(</span><span class="n">build_list</span><span class="p">,</span> <span class="n">select_repo</span><span class="p">,</span> <span class="n">all_repos_opt</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
+                <span class="nb">print</span> <span class="s2">&quot;Invalid entry, please enter repos to build.&quot;</span>
+                <span class="k">continue</span>
+
+    <span class="c1"># Ask the user if they want to use default script settings, if yes call the</span>
+    <span class="c1"># set_script_settings function</span>
+    <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;Default Script Settings: </span><span class="se">\n</span><span class="s2">&quot;</span>
+           <span class="o">+</span> <span class="s1">&#39;SCRIPT_MAJOR_VERSION = &#39;</span> <span class="o">+</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">SCRIPT_INFO</span><span class="p">[</span><span class="s1">&#39;script_major_version&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+           <span class="o">+</span> <span class="s1">&#39;SCRIPT_RELEASE = &#39;</span> <span class="o">+</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">SCRIPT_INFO</span><span class="p">[</span><span class="s1">&#39;script_release&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+           <span class="o">+</span> <span class="s1">&#39;SCRIPT_VERSION = &#39;</span> <span class="o">+</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">SCRIPT_INFO</span><span class="p">[</span><span class="s1">&#39;script_version&#39;</span><span class="p">])</span>
+
+    <span class="n">default_script_q</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Do you want to use the default script settings? (Y or YES): &quot;</span><span class="p">)</span>
+    <span class="n">script_settings_local</span> <span class="o">=</span> <span class="n">set_script_settings</span><span class="p">(</span><span class="n">default_script_q</span><span class="p">,</span> <span class="n">script_settings_local</span><span class="p">)</span>
+    <span class="nb">print</span> <span class="n">script_settings_local</span>
+    <span class="nb">print</span> <span class="s2">&quot;Script settings set.&quot;</span>
+
+    <span class="n">build_all</span><span class="p">(</span><span class="n">build_list</span><span class="p">,</span> <span class="n">starting_directory</span><span class="p">)</span>
+
+    <span class="n">create_local_mirror_directory</span><span class="p">(</span><span class="n">active_branch</span><span class="p">,</span> <span class="n">starting_directory</span><span class="p">,</span> <span class="n">build_list</span><span class="p">)</span></div>
+    <span class="c1">#</span>
+    <span class="c1"># try:</span>
+    <span class="c1">#     update_esg_node(active_branch, starting_directory, script_settings_local)</span>
+    <span class="c1"># except IOError:</span>
+    <span class="c1">#     print (&quot;esgf_bin for installer not present, node update and server upload cannot be completed.&quot;)</span>
+
+    <span class="c1"># esgf_upload()</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, William Hill.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
