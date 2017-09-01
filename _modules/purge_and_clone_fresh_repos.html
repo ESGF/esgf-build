@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>purge_and_clone_fresh_repos &#8212; esgf-build 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for purge_and_clone_fresh_repos</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;Utility module for purging local ESGF repos and cloning fresh copies from Github&#39;&#39;&#39;</span>
+<span class="c1">#!usr/bin/env python</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">from</span> <span class="nn">git</span> <span class="k">import</span> <span class="n">Repo</span>
+<span class="kn">from</span> <span class="nn">git</span> <span class="k">import</span> <span class="n">RemoteProgress</span>
+<span class="kn">import</span> <span class="nn">repo_info</span>
+
+
+<div class="viewcode-block" id="MyProgressPrinter"><a class="viewcode-back" href="../api.html#purge_and_clone_fresh_repos.MyProgressPrinter">[docs]</a><span class="k">class</span> <span class="nc">MyProgressPrinter</span><span class="p">(</span><span class="n">RemoteProgress</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Helper class for printing streaming output when cloning from Github&#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">op_code</span><span class="p">,</span> <span class="n">cur_count</span><span class="p">,</span> <span class="n">max_count</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">message</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cur_line</span>
+            <span class="nb">print</span> <span class="n">message</span></div>
+
+
+<div class="viewcode-block" id="purge_repos"><a class="viewcode-back" href="../api.html#purge_and_clone_fresh_repos.purge_repos">[docs]</a><span class="k">def</span> <span class="nf">purge_repos</span><span class="p">(</span><span class="n">repo_directory</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Delete all local ESGF repos from the repo_directory that are listed in the repo_info file&#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">repo</span> <span class="ow">in</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">REPO_LIST</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">repo_directory</span><span class="p">,</span> <span class="n">repo</span><span class="p">))</span>
+            <span class="nb">print</span> <span class="n">repo</span> <span class="o">+</span> <span class="s2">&quot; removed succesfully.&quot;</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="n">repo</span> <span class="o">+</span> <span class="s2">&quot; does not exist on this system.&quot;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">repo</span> <span class="o">+</span> <span class="s2">&quot; skipped.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="clone_repos"><a class="viewcode-back" href="../api.html#purge_and_clone_fresh_repos.clone_repos">[docs]</a><span class="k">def</span> <span class="nf">clone_repos</span><span class="p">(</span><span class="n">repo_directory</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Clone fresh ESGF repos that are listed in the repo_info file to the repo_directory&#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">repo_url</span> <span class="ow">in</span> <span class="n">repo_info</span><span class="o">.</span><span class="n">ALL_REPO_URLS</span><span class="p">:</span>
+        <span class="c1"># In the future, if a module with more than 2 &quot;-&quot;s is created, this will</span>
+        <span class="c1"># need to be revised</span>
+        <span class="c1"># strips.git from the string to make using reg-ex easier</span>
+        <span class="n">strip_repo</span> <span class="o">=</span> <span class="n">repo_url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.git&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">directory_name</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">&#39;esg\w*-\w+\W*\w+&#39;</span><span class="p">,</span> <span class="n">strip_repo</span><span class="p">)</span><span class="o">.</span><span class="n">group</span><span class="p">()</span>
+        <span class="n">repo_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">repo_directory</span><span class="p">,</span> <span class="n">directory_name</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Currently cloning repo: &quot;</span> <span class="o">+</span> <span class="n">directory_name</span><span class="p">)</span>
+        <span class="n">Repo</span><span class="o">.</span><span class="n">clone_from</span><span class="p">(</span><span class="n">repo_url</span><span class="p">,</span> <span class="n">repo_path</span><span class="p">,</span>
+                        <span class="n">progress</span><span class="o">=</span><span class="n">MyProgressPrinter</span><span class="p">())</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">directory_name</span> <span class="o">+</span> <span class="s2">&quot; successfully cloned -&gt; </span><span class="si">{repo_path}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">repo_path</span><span class="o">=</span><span class="n">repo_path</span><span class="p">))</span></div>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="c1"># Search for and remove appropriate repos</span>
+    <span class="n">default_repo_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;HOME&quot;</span><span class="p">],</span> <span class="s2">&quot;Development&quot;</span><span class="p">)</span>
+    <span class="n">repo_directory</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;Enter the directory where the repos will be placed [</span><span class="si">{default_repo_directory}</span><span class="s2">]: &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">default_repo_directory</span><span class="o">=</span><span class="n">default_repo_directory</span><span class="p">))</span> <span class="ow">or</span> <span class="n">default_repo_directory</span>
+    <span class="n">purge_repos</span><span class="p">(</span><span class="n">repo_directory</span><span class="p">)</span>
+    <span class="n">clone_repos</span><span class="p">(</span><span class="n">repo_directory</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, William Hill.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
