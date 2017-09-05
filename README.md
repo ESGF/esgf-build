@@ -4,7 +4,7 @@
     * Purge and clone script can be used to purge any existing repositories, and
 clone new ones.
     * In the terminal, typing pwd in the directory of repositories will return the path.
-    * Remove past esgf_bin and esgf_tarballs directories.
+    * Remove past esgf_bin directories.
 2. Dependencies installed:
     * Python 2.7
     * Apache Ant
@@ -30,9 +30,9 @@ clone new ones.
     0, 3, 4
     ```
     * Type nothing and hit [ENTER] to select all repos.
-6. The build process will begin and old tarballs will be purged where applicable, then new tarballs will attempt to build. If successful, "BUILD SUCCESSFUL" will print.
+6. The build process will begin. A build status report will be logged to the screen once all the builds have concluded.
 7. Update the script info if it is different than the default shown.
-8. Local mirror directory will be created if it does not already exist, and tarballs will be extracted to it.
+8. A Local mirror directory will be created if it does not already exist. This local mirror will contain the ESGF binaries that will get uploaded to the distribution mirrors.
 
 COMING SOON
 ------------
@@ -43,4 +43,4 @@ COMING SOON
 
 IMPORTANT
 -------------
-* Currently, esgf_bin and esgf_tarballs must be removed between builds to avoid a permission denied error.
+* Currently, esgf_bin must be removed between builds to avoid a permission denied error.

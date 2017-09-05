@@ -1,3 +1,4 @@
+'''Utility module for purging local ESGF repos and cloning fresh copies from Github'''
 #!usr/bin/env python
 import os
 import re
@@ -8,6 +9,7 @@ import repo_info
 
 
 class MyProgressPrinter(RemoteProgress):
+    '''Helper class for printing streaming output when cloning from Github'''
     def update(self, op_code, cur_count, max_count=None, message=''):
         if message:
             print self._cur_line
@@ -15,6 +17,7 @@ class MyProgressPrinter(RemoteProgress):
 
 
 def purge_repos(repo_directory):
+    '''Delete all local ESGF repos from the repo_directory that are listed in the repo_info file'''
     for repo in repo_info.REPO_LIST:
         try:
             shutil.rmtree(os.path.join(repo_directory, repo))
@@ -25,6 +28,7 @@ def purge_repos(repo_directory):
 
 
 def clone_repos(repo_directory):
+    '''Clone fresh ESGF repos that are listed in the repo_info file to the repo_directory'''
     for repo_url in repo_info.ALL_REPO_URLS:
         # In the future, if a module with more than 2 "-"s is created, this will
         # need to be revised
