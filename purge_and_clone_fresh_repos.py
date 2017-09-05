@@ -38,11 +38,13 @@ def clone_repos(repo_directory):
         print(directory_name + " successfully cloned -> {repo_path}".format(repo_path=repo_path))
 
 
-def main():
+def main(repo_directory=None):
     # Search for and remove appropriate repos
-    default_repo_directory = os.path.join(os.environ["HOME"], "Development")
-    repo_directory = raw_input("Enter the directory where the repos will be placed [{default_repo_directory}]: ".format(
-        default_repo_directory=default_repo_directory)) or default_repo_directory
+    if not repo_directory:
+        default_repo_directory = os.path.join(os.environ["HOME"], "Development")
+        repo_directory = raw_input("Enter the directory where the repos will be placed [{default_repo_directory}]: ".format(
+            default_repo_directory=default_repo_directory)) or default_repo_directory
+
     purge_repos(repo_directory)
     clone_repos(repo_directory)
 
