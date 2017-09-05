@@ -5,6 +5,7 @@ import errno
 import shutil
 import subprocess
 import shlex
+from contextlib import contextmanager
 
 def get_md5sum(file_name):
     '''
@@ -27,9 +28,9 @@ def mkdir_p(path, mode=0777):
     except OSError as exc:  # Python >2.5
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             print "{path} already exists".format(path=path)
-            print "Removing and rebuilding path."
-            shutil.rmtree(path)
-            mkdir_p(path, mode=0777)
+            # print "Removing and rebuilding path."
+            # shutil.rmtree(path)
+            # mkdir_p(path, mode=0777)
         else:
             raise
 
@@ -54,3 +55,18 @@ def replace_string_in_file(file_name, original_string, new_string):
     # Write the file out again
     with open(file_name, 'w') as file_handle:
         file_handle.write(filedata)
+
+
+@contextmanager
+def pushd(new_dir):
+    '''
+        Usage:
+        with pushd(some_dir):
+            print os.getcwd() # "some_dir"
+            some_actions
+        print os.getcwd() # "starting_directory"
+    '''
+    previous_dir = os.getcwd()
+    os.chdir(new_dir)
+    yield
+    os.chdir(previous_dir)
