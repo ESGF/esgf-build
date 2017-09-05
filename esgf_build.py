@@ -10,6 +10,7 @@ import mmap
 from git import Repo
 import repo_info
 import build_utilities
+import datetime
 
 ######IMPORTANT################################################################
 # Everything works and is tested up to update node and upload.
@@ -187,7 +188,7 @@ def copy_artifacts_to_local_mirror(esgf_artifact_directory):
         shutil.copytree(local_artifacts_directory, esgf_artifact_directory)
 
 
-def create_local_mirror_directory(active_branch, starting_directory, build_list):
+def create_local_mirror_directory(active_branch, starting_directory, build_list, script_major_version):
     '''Creates a directory for ESGF binaries that will get RSynced and uploaded to the remote distribution mirrors'''
     # if active_branch is devel then copy to dist folder for devel
     # if active_branch is master then copy to dist folder
@@ -246,7 +247,11 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
     copy_artifacts_to_local_mirror(esgf_artifact_directory)
 
     for component in components.keys():
-        component_binary_directory = os.path.join(esgf_binary_directory, component)
+        if component == "esgf-installer":
+            component_binary_directory = os.path.join(esgf_binary_directory, component, script_major_version)
+            print "esgf-installer binary directory:", component_binary_directory
+        else:
+            component_binary_directory = os.path.join(esgf_binary_directory, component)
         build_utilities.mkdir_p(component_binary_directory)
         os.chdir(component)
         print "current_directory: ", os.getcwd()
@@ -258,67 +263,68 @@ def create_local_mirror_directory(active_branch, starting_directory, build_list)
 
 def update_esg_node(active_branch, starting_directory, script_settings_local):
     '''Updates information in esg-node file'''
-    # TODO: in the future, remove hard-coded script settings from esgf-node
-    os.chdir("../esgf-installer")
-    src_dir = os.getcwd()
+    # os.chdir("../esgf-installer")
+    with build_utilities.pushd("../esgf-installer"):
+        src_dir = os.getcwd()
 
-    repo_handle = Repo(os.getcwd())
-    repo_handle.git.checkout(active_branch)
-    repo_handle.remotes.origin.pull()
+        repo_handle = Repo(os.getcwd())
+        repo_handle.git.checkout(active_branch)
+        repo_handle.remotes.origin.pull()
 
-    get_most_recent_commit(repo_handle)
+        get_most_recent_commit(repo_handle)
 
-    if active_branch == 'devel':
-        installer_dir = (starting_directory
-                         + '/esgf_bin/prod/dist/devel/esgf-installer/'
-                         + script_settings_local['script_major_version'])
-        last_push_dir = (starting_directory + '/dist-repos/prod/dist/devel')
-    else:
-        installer_dir = (starting_directory
-                         + '/esgf_bin/prod/dist/esgf-installer/'
-                         + script_settings_local['script_major_version'])
-        last_push_dir = (starting_directory + '/dist-repos/prod/dist')
+        if active_branch == 'devel':
+            installer_dir = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist', 'devel', 'esgf-installer', script_settings_local['script_major_version'])
+            last_push_dir = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist', 'devel')
+            build_utilities.mkdir_p(installer_dir)
+        else:
+            installer_dir = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist', 'esgf-installer', script_settings_local['script_major_version'])
+            last_push_dir = os.path.join(starting_directory, 'esgf_bin', 'prod', 'dist')
+            build_utilities.mkdir_p(installer_dir)
 
     replace_script_maj_version = '2.0'
     replace_release = 'Centaur'
     replace_version = 'v2.0-RC5.4.0-devel'
 
     print "Updating node with script versions."
-    build_utilities.replace_string_in_file('esg-node', replace_script_maj_version,
+    esg_node_path = os.path.join(installer_dir, 'esg-node')
+    build_utilities.replace_string_in_file(esg_node_path, replace_script_maj_version,
                                            script_settings_local['script_major_version'])
     build_utilities.replace_string_in_file(
-        'esg-node', replace_release, script_settings_local['script_release'])
+        esg_node_path, replace_release, script_settings_local['script_release'])
     build_utilities.replace_string_in_file(
-        'esg-node', replace_version, script_settings_local['script_version'])
+        esg_node_path, replace_version, script_settings_local['script_version'])
 
     print "Copying esg-init and auto-installer."
-    shutil.copyfile(src_dir + "/esg-init", installer_dir + "/esg-init")
-    shutil.copyfile(src_dir + "/setup-autoinstall", installer_dir + "/setup-autoinstall")
+    # shutil.copyfile(src_dir + "/esg-init", installer_dir + "/esg-init")
+    # shutil.copyfile(src_dir + "/setup-autoinstall", installer_dir + "/setup-autoinstall")
 
-    with open('esg-init.md5', 'w') as file1:
-        file1.write(build_utilities.get_md5sum('esg-init'))
-    with open('esg-node.md5', 'w') as file1:
-        file1.write(build_utilities.get_md5sum('esg-node'))
-    with open('esg-autoinstall.md5', 'w') as file1:
-        file1.write(build_utilities.get_md5sum('esg-autoinstall'))
-    os.chdir(last_push_dir)
-    with open('lastpush.md5', 'w') as file1:
-        file1.write(build_utilities.get_md5sum(last_push_dir))
+    #Calculate md5sum checksums
+    with build_utilities.pushd(installer_dir):
+        with open('esg-init.md5', 'w') as file1:
+            file1.write(build_utilities.get_md5sum('esg-init'))
+        with open('esg-node.md5', 'w') as file1:
+            file1.write(build_utilities.get_md5sum('esg-node'))
+        # with open('esg-autoinstall.md5', 'w') as file1:
+        #     file1.write(build_utilities.get_md5sum('esg-autoinstall'))
+
+        with build_utilities.pushd(last_push_dir):
+            with open('lastpush.md5', 'w') as file1:
+                current_date = str(datetime.datetime.now())
+                file1.write(build_utilities.get_md5sum(current_date))
 
 
-def esgf_upload():
+def esgf_upload(starting_directory, dry_run=False):
     '''Uses rsync to upload to coffee server'''
-    # use rsync to upload
-    print "Beginning upload."
-    with open('esgfupload.log', 'a') as file1:
-        build_utilities.stream_subprocess_output("rsync -arWvu dist-repos/prod/ -e ssh --delete"
-                                                 / " esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/"
-                                                 / "2>&1 |tee esgfupload.log", file1)
-    with open('esgfupload.log', 'a') as file1:
-        build_utilities.stream_subprocess_output("rsync -arWvunO dist-repos/prod/ -e ssh --delete"
-                                                 / "esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/"
-                                                 / " 2>&1 |tee esgfupload.log", file1)
-    print "Upload completed!"
+
+    if dry_run:
+        with open('esgfupload.log', 'a') as file1:
+            build_utilities.stream_subprocess_output("rsync -arWvunO {dist_repos}/prod/ -e ssh --delete esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/".format(dist_repos=os.path.join(starting_directory, 'esgf_bin')), file1)
+    else:
+        print "Beginning upload."
+        with open('esgfupload.log', 'a') as file1:
+            build_utilities.stream_subprocess_output("rsync -arWvu {dist_repos}/prod/ -e ssh --delete esgf@distrib-coffee.ipsl.jussieu.fr:/home/esgf/esgf/".format(dist_repos=os.path.join(starting_directory, 'esgf_bin')), file1)
+        print "Upload completed!"
 
 
 def create_build_list(build_list, select_repo, all_repos_opt):
@@ -451,14 +457,15 @@ def main():
 
     build_all(build_list, starting_directory)
 
-    create_local_mirror_directory(active_branch, starting_directory, build_list)
+    create_local_mirror_directory(active_branch, starting_directory, build_list, script_settings_local['script_major_version'])
     #
-    # try:
-    #     update_esg_node(active_branch, starting_directory, script_settings_local)
-    # except IOError:
-    #     print ("esgf_bin for installer not present, node update and server upload cannot be completed.")
+    try:
+        update_esg_node(active_branch, starting_directory, script_settings_local)
+    except IOError, error:
+        print "error:", error
+        print ("esgf_bin for installer not present, node update and server upload cannot be completed.")
 
-    # esgf_upload()
+    esgf_upload(starting_directory)
 
 
 if __name__ == '__main__':
