@@ -1,5 +1,4 @@
 esgf-dashboard
-esgf-desktop
 esgf-getcert
 esgf-idp
 esgf-installer

@@ -1,5 +1,4 @@
 https://github.com/ESGF/esgf-dashboard.git
-https://github.com/ESGF/esgf-desktop.git
 https://github.com/ESGF/esgf-getcert.git
 https://github.com/ESGF/esgf-idp.git
 https://github.com/ESGF/esgf-installer.git
