@@ -7,11 +7,6 @@ echo "script_maj_version: ${script_maj_version}"
 echo "script_version: ${script_version}"
 echo "script_release: ${script_release}"
 
-script_version="v2.6.0-devel-release"
-script_maj_version="2.6"
-script_release="Name"
-
-
 ####Do not change below this line####
 replace_version="v2.6.0-devel-release"
 replace_script_maj_version="2.6"
