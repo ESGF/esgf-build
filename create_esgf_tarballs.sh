@@ -7,12 +7,15 @@ echo "script_maj_version: ${script_maj_version}"
 echo "script_version: ${script_version}"
 echo "script_release: ${script_release}"
 
+script_version="v2.6.0-devel-release"
+script_maj_version="2.6"
+script_release="Name"
 
 
 ####Do not change below this line####
-replace_version='v2.0-RC5.4.0-devel'
-replace_script_maj_version=2.0
-replace_release='Centaur'
+replace_version="v2.6.0-devel-release"
+replace_script_maj_version="2.6"
+replace_release="Centaur"
 quotedsv=`echo "$replace_version" | sed 's/[./*?|]/\\\\&/g'`;
 quotedsr=`echo "$replace_release" | sed 's/[./*?|]/\\\\&/g'`;
 quotedmj=`echo $replace_script_maj_version|sed 's/[./*?|]/\\\\&/g'`;
