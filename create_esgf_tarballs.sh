@@ -1,5 +1,4 @@
 #!/usr/local/bin/bash
-set -x
 
 source "$(dirname -- "$0")/script_version_attributes.sh"
 
@@ -64,10 +63,11 @@ for i in "${!components[@]}"; do
 		echo "Directory $i not found. Bailing out.";
 		continue;
 	fi
+    mkdir -p temp-dists/$script_maj_version/$script_sub_version/$i
 	#Copy the dist directory of a repo to temp-dists; The dist directory contains the jars,wars, and egg files
-	cp $i/dist/* temp-dists/$script_maj_version/$script_sub_version;
+	cp $i/dist/* temp-dists/$script_maj_version/$script_sub_version/$i/;
 	#Remove the ivy* files from temp-dists that just got copied over
-	rm temp-dists/$script_maj_version/$script_sub_version/ivy*.xml;
+	rm temp-dists/$script_maj_version/$script_sub_version/$i/ivy*.xml;
 
 	for file in ${components[$i]}; do
 		if [ ! -e $i/$file ]; then
@@ -77,11 +77,11 @@ for i in "${!components[@]}"; do
 			echo "File $i/$file OK";
 			#Copy file to temp-dists
 			#TODO: mkdir -p temp-dists/$i
-			cp $i/$file temp-dists/$script_maj_version/$script_sub_version/
+			cp $i/$file temp-dists/$script_maj_version/$script_sub_version/$i/
 		fi
 	done
 
-	pushd temp-dists/$script_maj_version/$script_sub_version || exit;
+	pushd temp-dists/$script_maj_version/$script_sub_version/$i || exit;
 
 	for f in *; do
 		#if file is a md5 hash; bypass it if so
@@ -105,13 +105,13 @@ for i in "${!components[@]}"; do
 			md5sum $f >$f.md5;
 		fi
 	done
-    pushd ../..
+    pushd ../../..
 	tar -czf $i-dist.tgz *;
 	mv $i-dist.tgz ../esgf_tarballs
 	popd; popd
 	rm -rf temp-dists/$script_maj_version/$script_sub_version/*
 	tar -tf esgf_tarballs/$i-dist.tgz |while read ln; do
 		val=`echo $ln|sed '/\(.*\/$\)/d'`;
-		echo "$i/$ln">>listoffiles;
+		echo "$ln">>listoffiles;
 	done
 done

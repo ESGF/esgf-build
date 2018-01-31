@@ -14,6 +14,13 @@ dists[esgf-cog-dist.tgz]='esgf-cog'
 dists[filters-dist.tgz]='filters'
 dists[esgf-stats-api-dist.tgz]='esgf-stats-api'
 
+source "$(dirname -- "$0")/script_version_attributes.sh"
+
+echo "script_maj_version: ${script_maj_version}"
+echo "script_sub_version: ${script_sub_version}"
+echo "script_version: ${script_version}"
+echo "script_release: ${script_release}"
+
 
 if [[ $1 == "devel" ]]; then
 	distribution_type='devel'
@@ -26,28 +33,24 @@ fi
 
 for i in "${!dists[@]}"; do
 	tgtdir=${dists[$i]};
-        if [ ! -d dist-repos/prod/dist/devel/$tgtdir/ ]; then
-        	mkdir -p dist-repos/prod/dist/devel/$tgtdir/
-        fi
-        if [ ! -d dist-repos/prod/dist/$tgtdir/ ]; then
-                mkdir -p dist-repos/prod/dist/$tgtdir/
-        fi
+
 	if [ $distribution_type == "devel" ]; then
-		cp esgf_tarballs/$i dist-repos/prod/dist/devel/$tgtdir/;
-		cd dist-repos/prod/dist/devel/$tgtdir;
+		cp esgf_tarballs/$i dist-repos/prod/dist/devel/;
+		pushd dist-repos/prod/dist/devel/;
 		echo "Extracting ${i} -> $(pwd)" 
 		tar -xvzf $i && rm -f $i;
 		echo
 	else 
-		cp esgf_tarballs/$i dist-repos/prod/dist/$tgtdir/;
-		cd dist-repos/prod/dist/$tgtdir;
+		cp esgf_tarballs/$i dist-repos/prod/dist/;
+		pushd dist-repos/prod/dist/;
 		echo "Extracting ${i} -> $(pwd)"
 		tar -xvzf $i && rm -f $i;
 		echo
 	fi
 	if [ "$tgtdir" = "esgf-installer" ]; then
+        mkdir -p ../externals/bootstrap
 		mv esg-globus* ../externals/bootstrap/
 	fi
 	
-	cd - 
+	popd
 done
