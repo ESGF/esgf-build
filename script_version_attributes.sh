@@ -1,3 +1,3 @@
-script_maj_version=2.5
-script_version='v2.5.13-devel-release'
-script_release='Helheim'
+script_maj_version=2.6
+script_version='v2.6.0-devel-release'
+script_release='Asgard'
