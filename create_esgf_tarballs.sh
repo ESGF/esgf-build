@@ -1,10 +1,10 @@
 #!/usr/local/bin/bash
-
+set -x
 
 source "$(dirname -- "$0")/script_version_attributes.sh"
 
 echo "script_maj_version: ${script_maj_version}"
-echo "script_sub_version: ${script_maj_version}"
+echo "script_sub_version: ${script_sub_version}"
 echo "script_version: ${script_version}"
 echo "script_release: ${script_release}"
 
@@ -15,8 +15,13 @@ replace_script_sub_version="0"
 replace_release="Name"
 quotedsv=`echo "$replace_version" | sed 's/[./*?|]/\\\\&/g'`;
 quotedsr=`echo "$replace_release" | sed 's/[./*?|]/\\\\&/g'`;
-quotedmj=`echo $replace_script_maj_version|sed 's/[./*?|]/\\\\&/g'`;
-quotedsubv=`echo $replace_script_sub_version|sed 's/[./*?|]/\\\\&/g'`;
+quotedmj=`echo "$replace_script_maj_version"|sed 's/[./*?|]/\\\\&/g'`;
+quotedsubv=`echo "$replace_script_sub_version"|sed 's/[./*?|]/\\\\&/g'`;
+
+quotedreplsv=`echo "$script_version"|sed 's/[./*?|]/\\\\&/g'`;
+quotedreplsmv=`echo "$script_maj_version"|sed 's/[./*?|]/\\\\&/g'`;
+quotedreplssv=`echo "$script_sub_version"|sed 's/[./*?|]/\\\\&/g'`;
+quotedreplrel=`echo "$script_release"|sed 's/[./*?|]/\\\\&/g'`;
 
 echo -n >listoffiles;
 #Create dictionary of components
@@ -72,11 +77,11 @@ for i in "${!components[@]}"; do
 			echo "File $i/$file OK";
 			#Copy file to temp-dists
 			#TODO: mkdir -p temp-dists/$i
-			cp $i/$file temp-dists/$script_maj_version/$script_sub_version
+			cp $i/$file temp-dists/$script_maj_version/$script_sub_version/
 		fi
 	done
 
-	cd temp-dists/$script_maj_version/$script_sub_version || exit;
+	pushd temp-dists/$script_maj_version/$script_sub_version || exit;
 
 	for f in *; do
 		#if file is a md5 hash; bypass it if so
@@ -86,23 +91,24 @@ for i in "${!components[@]}"; do
 		else
 			if [ "$f" = "esg-node" ]; then
 				echo "Found esg-node"
-				sed -i .backup "s/\(script_version=\"$quotedsv\"\)/script_version=\"$script_version\"/" esg-node;
-				sed -i .backup "s/\(script_release=\"$quotedsr\"\)/script_release=\"$script_release\"/" esg-node;
-				sed -i .backup "s/\(script_maj_version=\"$quotedmj\"\)/script_maj_version=\"$script_maj_version\"/" esg-node;
-				sed -i .backup "s/\(script_sub_version=\"$quotedsubv\"\)/script_sub_version=\"$script_sub_version\"/" esg-node;
+				sed -i "s/\(script_version=\"$quotedsv\"\)/script_version=\"$quotedreplsv\"/" esg-node;
+				sed -i "s/\(script_release=\"$quotedsr\"\)/script_release=\"$quotedreplrel\"/" esg-node;
+				sed -i "s/\(script_maj_version=\"$quotedmj\"\)/script_maj_version=\"$quotedreplsmv\"/" esg-node;
+				sed -i "s/\(script_sub_version=\"$quotedsubv\"\)/script_sub_version=\"$quotedreplssv\"/" esg-node;
 			fi
 			if [ "$f" = "esg-bootstrap" ]; then
 				echo "Found esg-bootstrap"
-				sed -i .backup "s/\(script_maj_version=\"$quotedmj\"\)/script_maj_version=\"$script_maj_version\"/" esg-bootstrap;
-				sed -i .backup "s/\(script_sub_version=\"$quotedsubv\"\)/script_sub_version=\"$script_sub_version\"/" esg-bootstrap;
+				sed -i "s/\(script_maj_version=\"$quotedmj\"\)/script_maj_version=\"$quotedreplsmv\"/" esg-bootstrap;
+				sed -i "s/\(script_sub_version=\"$quotedsubv\"\)/script_sub_version=\"$quotedreplssv\"/" esg-bootstrap;
 			fi
 			#Create md5sum of file
 			md5sum $f >$f.md5;
 		fi
-	 done
+	done
+    pushd ../..
 	tar -czf $i-dist.tgz *;
 	mv $i-dist.tgz ../esgf_tarballs
-	cd ..
+	popd; popd
 	rm -rf temp-dists/$script_maj_version/$script_sub_version/*
 	tar -tf esgf_tarballs/$i-dist.tgz |while read ln; do
 		val=`echo $ln|sed '/\(.*\/$\)/d'`;
