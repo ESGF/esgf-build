@@ -1,7 +1,6 @@
 #!/usr/local/bin/bash
 declare -A dists
 dists[esgf-dashboard-dist.tgz]='esgf-dashboard'
-dists[esgf-desktop-dist.tgz]='esgf-desktop'
 dists[esgf-getcert-dist.tgz]='esgf-getcert'
 dists[esgf-idp-dist.tgz]='esgf-idp'
 dists[esgf-installer-dist.tgz]='esgf-installer'
