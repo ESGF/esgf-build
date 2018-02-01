@@ -27,7 +27,7 @@ echo -n >listoffiles;
 declare -A components
 components[esgf-dashboard]='bin/esg-dashboard dist/esgf_dashboard-0.0.2-py2.7.egg INSTALL README LICENSE'
 components[esgf-idp]='bin/esg-idp INSTALL README LICENSE'
-components[esgf-installer]='jar_security_scan setup-autoinstall globus/esg-globus esg-bootstrap esg-node esg-init esg-functions esg-gitstrap esg-node.completion esg-purge.sh esg-autoinstall-testnode esg-autoinstall esg-autoinstall.template compute-tools/esg-compute-languages compute-tools/esg-compute-tools INSTALL README LICENSE'
+components[esgf-installer]='jar_security_scan setup-autoinstall globus/esg-globus esg-bootstrap esg-node esg-init esg-functions esg-gitstrap esg-node.completion esg-purge.sh esg-autoinstall-testnode esg-autoinstall esg-autoinstall.template compute-tools/esg-compute-languages compute-tools/esg-compute-tools INSTALL README LICENSE esg-installarg'
 components[esgf-node-manager]='bin/esg-node-manager bin/esgf-sh bin/esgf-spotcheck etc/xsd/registration/registration.xsd INSTALL README LICENSE'
 components[esgf-security]='bin/esgf-user-migrate bin/esg-security bin/esgf-policy-check INSTALL README LICENSE'
 #components[esgf-web-fe]='bin/esg-web-fe INSTALL README LICENSE'
