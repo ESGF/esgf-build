@@ -35,13 +35,16 @@ components[esg-orp]='bin/esg-orp INSTALL README LICENSE etc/conf/esg-orp.propert
 components[esgf-getcert]='INSTALL README LICENSE'
 components[esg-search]='bin/esg-search bin/esgf-crawl bin/esgf-optimize-index etc/conf/jetty/jetty.xml-auth etc/conf/jetty/realm.properties etc/conf/solr/schema.xml etc/conf/solr/solrconfig.xml etc/conf/solr/solrconfig.xml-replica etc/conf/solr/solr.xml-master etc/conf/solr/solr.xml-slave etc/conf/jetty/webdefault.xml-auth INSTALL README LICENSE solr-home.tar etc/conf/solr/log4j.properties'
 components[esgf-product-server]='esg-product-server'
-components[filters]='esg-access-logging-filter esg-drs-resolving-filter esg-security-las-ip-filter esg-security-tokenless-filters commons-httpclient-3.1.jar commons-lang-2.6.jar esg-security-tokenless-thredds-filters.xml jdom-legacy-1.1.3.jar esgf-security-las-ip-filter.xml'
+components[filters]='esg-access-logging-filter esg-drs-resolving-filter esg-security-las-ip-filter esg-security-tokenless-filters commons-httpclient-3.1.jar commons-lang-2.6.jar esg-security-tokenless-thredds-filters.xml jdom-legacy-1.1.3.jar esg-security-las-ip-filter.xml'
 components[esgf-cog]='esg-cog'
 components[esgf-stats-api]='bin/esg_stats-api_v2 dist/esgf-stats-api.war'
 
 #Delete esgf_tarballs and temp-dists directories
 rm -rf esgf_tarballs
 rm -rf temp-dists
+rm -rf esgf-product-server
+rm -rf filters
+rm -rf esgf-cog
 
 #Recreate esgf_tarballs and temp-dists directories
 mkdir esgf_tarballs

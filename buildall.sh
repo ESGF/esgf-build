@@ -7,8 +7,13 @@ JAVADIR=${JAVA_BINARY%/*}
 echo "JAVA_DIR: ${JAVADIR}"
 PYTHONDIR="$(dirname $(which python))"
 echo "PYTHONDIR: ${PYTHONDIR}"
+pyv="$(python -V 2>&1)"
+res=`echo $pyv|awk '{print $2}'|cut -d '.' -f1-2`
+if [ "$res" != "2.7" ]; then
+    echo "You need to have python 2.7 in your path before running build";
+    exit -1;
+fi
 LOGDIR=$PWD/buildlogs
-
 mkdir -p $LOGDIR
 
 export JAVA_HOME=$JAVADIR
@@ -57,7 +62,7 @@ for i in "${fulllist[@]}"; do
 
 	echo
 	echo "*******************************"
-	echo "Building  ${i}"
+	echo "Building  ~$i~"
 	echo "*******************************"
 	echo
 

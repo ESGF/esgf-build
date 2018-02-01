@@ -6,7 +6,7 @@ esgf-node-manager
 esgf-publisher-resources
 esgf-security
 esg-orp
-esg-publisher 
-esg-search 
+esg-publisher
+esg-search
 esgf-stats-api
 dep-filters
