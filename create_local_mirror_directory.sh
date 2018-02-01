@@ -20,7 +20,6 @@ echo "script_sub_version: ${script_sub_version}"
 echo "script_version: ${script_version}"
 echo "script_release: ${script_release}"
 
-
 if [[ $1 == "devel" ]]; then
 	distribution_type='devel'
 elif [[ $1 == "master" ]]; then
@@ -47,8 +46,8 @@ for i in "${!dists[@]}"; do
 		echo
 	fi
 	if [ "$tgtdir" = "esgf-installer" ]; then
-        mkdir -p ../externals/bootstrap
-		mv esg-globus* ../externals/bootstrap/
+        mkdir -p $script_maj_version/$script_sub_version/externals/bootstrap
+		mv $script_maj_version/$script_sub_version/esgf-installer/esg-globus* $script_maj_version/$script_sub_version/externals/bootstrap/
 	fi
 	
 	popd
