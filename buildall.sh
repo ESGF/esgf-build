@@ -51,7 +51,7 @@ for i in "${fulllist[@]}"; do
 	# sys	0m16.969s
 
 	#Ignore directories without a build.xml file
-	if [ "$i" = "esgf-installer" ] || [ "$i" = "esgf-publisher-resources" ] || [ "$i" = "esgf-desktop" ] || [ "$i" = "esg-publisher" ]; || [ "$i" = "dep-filters" ]; then
+	if [ "$i" = "esgf-installer" ] || [ "$i" = "esgf-publisher-resources" ] || [ "$i" = "esgf-desktop" ] || [ "$i" = "esg-publisher" ] || [ "$i" = "dep-filters" ]; then
 		continue;
 	fi
 
