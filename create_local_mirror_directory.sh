@@ -62,4 +62,5 @@ ln -s ../../../robots.txt robots.txt
 ln -s ../../../robots.txt.md5 robots.txt.md5
 ln -s ../../../favicon.ico favicon.ico
 ln -s ../../../favicon.ico.md5 favicon.ico.md5
+ln -s ../../../thirdparty thirdparty
 popd;
