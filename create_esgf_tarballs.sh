@@ -33,7 +33,7 @@ components[esgf-security]='bin/esgf-user-migrate bin/esg-security bin/esgf-polic
 #components[esgf-web-fe]='bin/esg-web-fe INSTALL README LICENSE'
 components[esg-orp]='bin/esg-orp INSTALL README LICENSE etc/conf/esg-orp.properties'
 components[esgf-getcert]='INSTALL README LICENSE'
-components[esg-search]='bin/esg-search bin/esgf-crawl bin/esgf-optimize-index etc/conf/jetty/jetty.xml-auth etc/conf/jetty/realm.properties etc/conf/solr/schema.xml etc/conf/solr/solrconfig.xml etc/conf/solr/solrconfig.xml-replica etc/conf/solr/solr.xml-master etc/conf/solr/solr.xml-slave etc/conf/jetty/webdefault.xml-auth INSTALL README LICENSE solr-home.tar'
+components[esg-search]='bin/esg-search bin/esgf-crawl bin/esgf-optimize-index etc/conf/jetty/jetty.xml-auth etc/conf/jetty/realm.properties etc/conf/solr/schema.xml etc/conf/solr/solrconfig.xml etc/conf/solr/solrconfig.xml-replica etc/conf/solr/solr.xml-master etc/conf/solr/solr.xml-slave etc/conf/jetty/webdefault.xml-auth INSTALL README LICENSE solr-home.tar etc/conf/solr/log4j.properties'
 components[esgf-product-server]='esg-product-server'
 components[filters]='esg-access-logging-filter esg-drs-resolving-filter esg-security-las-ip-filter esg-security-tokenless-filters commons-httpclient-3.1.jar commons-lang-2.6.jar esg-security-tokenless-thredds-filters.xml jdom-legacy-1.1.3.jar esgf-security-las-ip-filter.xml'
 components[esgf-cog]='esg-cog'
@@ -57,7 +57,10 @@ cp esgf-installer/product-server/* esgf-product-server/
 cp esgf-installer/cog/esg-cog esgf-cog
 cp esgf-installer/filters/* filters/
 cp dep-filters/* filters/
-cp esg-search/bin/solr-home.TAR esg-search/solr-home.tar
+pushd esg-search/etc/conf
+tar -cf solr-home.tar solr-home
+popd
+mv esg-search/etc/conf/solr-home.tar esg-search
 
 for i in "${!components[@]}"; do
 	if [ ! -d $i ]; then
@@ -106,6 +109,10 @@ for i in "${!components[@]}"; do
 			md5sum $f >$f.md5;
 		fi
 	done
+    if [ "$i" = "esg-search" ]; then
+        mkdir -p etc/conf/solr
+        mv log4j.properties* etc/conf/solr/
+    fi
     pushd ../../..
 	tar -czf $i-dist.tgz *;
 	mv $i-dist.tgz ../esgf_tarballs
