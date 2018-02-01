@@ -38,17 +38,29 @@ for i in "${!dists[@]}"; do
 		echo "Extracting ${i} -> $(pwd)" 
 		tar -xvzf $i && rm -f $i;
 		echo
+        pushd $script_maj_version/$script_sub_version
+        ln -s ../../../java java
+        ln -s ../../../lists lists
+        ln -s ../../../externals externals
+        ln -s ../../../geoip geoip
+        ln -s ../../../thredds thredds
+        ln -s ../../../robots.txt robots.txt
+        ln -s ../../../favicon.ico favicon.ico
+        popd; popd
 	else 
 		cp esgf_tarballs/$i dist-repos/prod/dist/;
 		pushd dist-repos/prod/dist/;
 		echo "Extracting ${i} -> $(pwd)"
 		tar -xvzf $i && rm -f $i;
 		echo
+        pushd $script_maj_version/$script_sub_version
+        ln -s ../../../java java
+        ln -s ../../../lists lists
+        ln -s ../../../externals externals
+        ln -s ../../../geoip geoip
+        ln -s ../../../thredds thredds
+        ln -s ../../../robots.txt robots.txt
+        ln -s ../../../favicon.ico favicon.ico
+        popd; popd
 	fi
-	if [ "$tgtdir" = "esgf-installer" ]; then
-        mkdir -p $script_maj_version/$script_sub_version/externals/bootstrap
-		mv $script_maj_version/$script_sub_version/esgf-installer/esg-globus* $script_maj_version/$script_sub_version/externals/bootstrap/
-	fi
-	
-	popd
 done

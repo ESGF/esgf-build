@@ -17,6 +17,10 @@ echo "active_branch: ${active_branch}"
 echo
 
 echo -n >taglist;
+echo -n >gitloglist;
+echo -n >ontags;
+echo -n >postontag;
+
 for i in "${fulllist[@]}"; do
 	echo $i;
 	echo $i >>taglist;
@@ -26,8 +30,16 @@ for i in "${fulllist[@]}"; do
 	git pull --tags;
 	git describe; 
 	git describe>>../taglist;
-	echo
-	printf $"\n">>taglist;
-	echo "\n" >>taglist; 
+	echo -e "\n" >>../taglist;
+    ontag=`git describe|cut -d '-' -f1`;
+    echo "$i:$ontag" >>../ontags
+    if [ "$i" != "esgf-installer" ]; then
+        git checkout $ontag
+        postot=`git describe`;
+        echo "$i:$postot" >>../postontag
+    fi
+    echo "$i" >>../gitloglist
+    git log -n 1 >>../gitloglist
+	echo -e "\n" >>../gitloglist;
 	cd ..
 done
