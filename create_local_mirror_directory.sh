@@ -29,6 +29,23 @@ else
 	exit
 fi
 
+make_symlinks(){
+
+    ln -s ../../../java java
+    ln -s ../../../lists lists
+    ln -s ../../../externals externals
+    ln -s ../../../geoip geoip
+    ln -s ../../../thredds thredds
+    ln -s ../../../robots.txt robots.txt
+    ln -s ../../../robots.txt.md5 robots.txt.md5
+    ln -s ../../../favicon.ico favicon.ico
+    ln -s ../../../favicon.ico.md5 favicon.ico.md5
+    ln -s ../../../thirdparty thirdparty
+
+}
+
+
+
 for i in "${!dists[@]}"; do
 	tgtdir=${dists[$i]};
 
@@ -49,18 +66,9 @@ for i in "${!dists[@]}"; do
 	fi
 done
 if [ $distribution_type == "devel" ]; then
-    pushd dist-repos/prod/dist/devel/$script_maj_version/$script_sub_version
+    pushd dist-repos/prod/dist/devel/$script_maj_version/$script_sub_version && make_symlinks
+    popd;
 else 
-    pushd dist-repos/prod/dist/$script_maj_version/$script_sub_version
+    pushd dist-repos/prod/dist/$script_maj_version/$script_sub_version && make_symlinks
+    popd;
 fi
-ln -s ../../../java java
-ln -s ../../../lists lists
-ln -s ../../../externals externals
-ln -s ../../../geoip geoip
-ln -s ../../../thredds thredds
-ln -s ../../../robots.txt robots.txt
-ln -s ../../../robots.txt.md5 robots.txt.md5
-ln -s ../../../favicon.ico favicon.ico
-ln -s ../../../favicon.ico.md5 favicon.ico.md5
-ln -s ../../../thirdparty thirdparty
-popd;
