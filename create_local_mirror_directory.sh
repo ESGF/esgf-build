@@ -38,29 +38,26 @@ for i in "${!dists[@]}"; do
 		echo "Extracting ${i} -> $(pwd)" 
 		tar -xvzf $i && rm -f $i;
 		echo
-        pushd $script_maj_version/$script_sub_version
-        ln -s ../../../java java
-        ln -s ../../../lists lists
-        ln -s ../../../externals externals
-        ln -s ../../../geoip geoip
-        ln -s ../../../thredds thredds
-        ln -s ../../../robots.txt robots.txt
-        ln -s ../../../favicon.ico favicon.ico
-        popd; popd
+        popd;
 	else 
 		cp esgf_tarballs/$i dist-repos/prod/dist/;
 		pushd dist-repos/prod/dist/;
 		echo "Extracting ${i} -> $(pwd)"
 		tar -xvzf $i && rm -f $i;
 		echo
-        pushd $script_maj_version/$script_sub_version
-        ln -s ../../../java java
-        ln -s ../../../lists lists
-        ln -s ../../../externals externals
-        ln -s ../../../geoip geoip
-        ln -s ../../../thredds thredds
-        ln -s ../../../robots.txt robots.txt
-        ln -s ../../../favicon.ico favicon.ico
-        popd; popd
+        popd;
 	fi
 done
+if [ $distribution_type == "devel" ]; then
+    pushd dist-repos/prod/dist/devel/$script_maj_version/$script_sub_version
+else 
+    pushd dist-repos/prod/dist/$script_maj_version/$script_sub_version
+fi
+ln -s ../../../java java
+ln -s ../../../lists lists
+ln -s ../../../externals externals
+ln -s ../../../geoip geoip
+ln -s ../../../thredds thredds
+ln -s ../../../robots.txt robots.txt
+ln -s ../../../favicon.ico favicon.ico
+popd;
