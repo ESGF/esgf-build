@@ -31,11 +31,11 @@ components[esgf-installer]='jar_security_scan setup-autoinstall globus/esg-globu
 components[esgf-node-manager]='bin/esg-node-manager bin/esgf-sh bin/esgf-spotcheck etc/xsd/registration/registration.xsd INSTALL README LICENSE'
 components[esgf-security]='bin/esgf-user-migrate bin/esg-security bin/esgf-policy-check INSTALL README LICENSE'
 #components[esgf-web-fe]='bin/esg-web-fe INSTALL README LICENSE'
-components[esg-orp]='bin/esg-orp INSTALL README LICENSE'
+components[esg-orp]='bin/esg-orp INSTALL README LICENSE etc/conf/esg-orp.properties'
 components[esgf-getcert]='INSTALL README LICENSE'
 components[esg-search]='bin/esg-search bin/esgf-crawl bin/esgf-optimize-index etc/conf/jetty/jetty.xml-auth etc/conf/jetty/realm.properties etc/conf/solr/schema.xml etc/conf/solr/solrconfig.xml etc/conf/solr/solrconfig.xml-replica etc/conf/solr/solr.xml-master etc/conf/solr/solr.xml-slave etc/conf/jetty/webdefault.xml-auth INSTALL README LICENSE'
 components[esgf-product-server]='esg-product-server'
-components[filters]='esg-access-logging-filter esg-drs-resolving-filter esg-security-las-ip-filter esg-security-tokenless-filters'
+components[filters]='esg-access-logging-filter esg-drs-resolving-filter esg-security-las-ip-filter esg-security-tokenless-filters commons-httpclient-3.1.jar commons-lang-2.6.jar esg-security-tokenless-thredds-filters.xml jdom-legacy-1.1.3.jar'
 components[esgf-cog]='esg-cog'
 components[esgf-stats-api]='bin/esg_stats-api_v2 dist/esgf-stats-api.war'
 
@@ -56,6 +56,7 @@ mkdir esgf-cog 2>/dev/null
 cp esgf-installer/product-server/* esgf-product-server/
 cp esgf-installer/cog/esg-cog esgf-cog
 cp esgf-installer/filters/* filters/
+cp dep-filters/* filters/
 
 for i in "${!components[@]}"; do
 	if [ ! -d $i ]; then
