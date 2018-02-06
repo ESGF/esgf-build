@@ -11,6 +11,12 @@ esgf-installer/
 esgf-node-manager/
 esgf-product-server/
 esgf-publisher-resources/
+apache-frontend/
+dep-filters/
+esgf-prepare/
+esgf-reststats/
+esgf-stats-api/
+esgf_tarballs/
 esgf-security/
 esgf-web-fe/
 filters/
