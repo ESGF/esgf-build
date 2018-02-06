@@ -30,19 +30,36 @@ else
 fi
 
 make_symlinks(){
+    if [ "$distribution_type" = "devel" ]; then
 
-    ln -s ../../../java java
-    ln -s ../../../lists lists
-    ln -s ../../../externals externals
-    ln -s ../../../geoip geoip
-    ln -s ../../../thredds thredds
-    ln -s ../../../robots.txt robots.txt
-    ln -s ../../../robots.txt.md5 robots.txt.md5
-    ln -s ../../../favicon.ico favicon.ico
-    ln -s ../../../favicon.ico.md5 favicon.ico.md5
-    ln -s ../../../thirdparty thirdparty
-    ln -s ../../../etc etc
-    ln -s ../../../utils utils
+        ln -s ../../../java java
+        ln -s ../../lists lists
+        ln -s ../../../externals externals
+        ln -s ../../../geoip geoip
+        ln -s ../../thredds thredds
+        ln -s ../../../robots.txt robots.txt
+        ln -s ../../../robots.txt.md5 robots.txt.md5
+        ln -s ../../../favicon.ico favicon.ico
+        ln -s ../../../favicon.ico.md5 favicon.ico.md5
+        ln -s ../../../thirdparty thirdparty
+        ln -s ../../../etc etc
+        ln -s ../../../utils utils
+
+    else
+
+        ln -s ../../java java
+        ln -s ../../lists lists
+        ln -s ../../externals externals
+        ln -s ../../geoip geoip
+        ln -s ../../thredds thredds
+        ln -s ../../robots.txt robots.txt
+        ln -s ../../robots.txt.md5 robots.txt.md5
+        ln -s ../../favicon.ico favicon.ico
+        ln -s ../../favicon.ico.md5 favicon.ico.md5
+        ln -s ../../thirdparty thirdparty
+        ln -s ../../etc etc
+
+    fi
 
 }
 
