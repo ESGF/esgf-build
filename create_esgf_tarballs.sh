@@ -113,9 +113,9 @@ for i in "${!components[@]}"; do
 				echo "Found esg-bootstrap"
 				sed -i "s/\(script_maj_version=\"$quotedmj\"\)/script_maj_version=\"$quotedreplsmv\"/" esg-bootstrap;
 				sed -i "s/\(script_sub_version=\"$quotedsubv\"\)/script_sub_version=\"$quotedreplssv\"/" esg-bootstrap;
-                cat esg-bootstrap|sed "s/$quotedipsl/$quotedliu >esg-bootstrap.liu
-                cat esg-bootstrap|sed "s/$quotedipsl/$quotedceda >esg-bootstrap.ceda
-                cat esg-bootstrap|sed "s/$quotedipsl/$quotedaims >esg-bootstrap.aims
+                cat esg-bootstrap|sed "s/$quotedipsl/$quotedliu/" >esg-bootstrap.liu && md5sum esg-bootstrap.liu >esg-bootstrap.liu.md5
+                cat esg-bootstrap|sed "s/$quotedipsl/$quotedceda/" >esg-bootstrap.ceda && md5sum esg-bootstrap.ceda >esg-bootstrap.ceda.md5
+                cat esg-bootstrap|sed "s/$quotedipsl/$quotedaims/" >esg-bootstrap.aims && md5sum esg-bootstrap.aims >esg-bootstrap.aims.md5
 			fi
 			#Create md5sum of file
 			md5sum $f >$f.md5;
