@@ -22,6 +22,12 @@ quotedreplsmv=`echo "$script_maj_version"|sed 's/[./*?|]/\\\\&/g'`;
 quotedreplssv=`echo "$script_sub_version"|sed 's/[./*?|]/\\\\&/g'`;
 quotedreplrel=`echo "$script_release"|sed 's/[./*?|]/\\\\&/g'`;
 
+quotedipsl=`echo "distrib-coffee.ipsl.jussieu.fr/pub/esgf"|sed 's/[./*?|]/\\\\&/g'`;
+quotedceda=`echo "dist.ceda.ac.uk/esgf"|sed 's/[./*?|]/\\\\&/g'`;
+quotedaims=`echo "aims1.llnl.gov/esgf"|sed 's/[./*?|]/\\\\&/g'`;
+quotedliu=`echo "esg-dn2.nsc.liu.se/esgf"|sed 's/[./*?|]/\\\\&/g'`;
+
+esgf_dist_mirrors_list=("dist.ceda.ac.uk/esgf" "aims1.llnl.gov/esgf" "esg-dn2.nsc.liu.se/esgf")
 echo -n >listoffiles;
 #Create dictionary of components
 declare -A components
@@ -107,6 +113,9 @@ for i in "${!components[@]}"; do
 				echo "Found esg-bootstrap"
 				sed -i "s/\(script_maj_version=\"$quotedmj\"\)/script_maj_version=\"$quotedreplsmv\"/" esg-bootstrap;
 				sed -i "s/\(script_sub_version=\"$quotedsubv\"\)/script_sub_version=\"$quotedreplssv\"/" esg-bootstrap;
+                cat esg-bootstrap|sed "s/$quotedipsl/$quotedliu >esg-bootstrap.liu
+                cat esg-bootstrap|sed "s/$quotedipsl/$quotedceda >esg-bootstrap.ceda
+                cat esg-bootstrap|sed "s/$quotedipsl/$quotedaims >esg-bootstrap.aims
 			fi
 			#Create md5sum of file
 			md5sum $f >$f.md5;
