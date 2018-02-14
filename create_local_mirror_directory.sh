@@ -58,6 +58,7 @@ make_symlinks(){
         ln -s ../../favicon.ico.md5 favicon.ico.md5
         ln -s ../../thirdparty thirdparty
         ln -s ../../etc etc
+        ln -s ../../utils utils
 
     fi
 
