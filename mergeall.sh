@@ -1,18 +1,14 @@
 #!/bin/bash
 
-fulllist='esgf-dashboard esgf-desktop esgf-getcert esgf-idp esgf-installer esgf-node-manager esgf-publisher-resources esgf-security esg-orp esg-publisher esg-search esgf-stats-api'
-echo -n >taglist;
-active_branch='master'
-for i in $fulllist; do
-	echo $i;
-	echo $i >>taglist;
-	echo "----------------------------" >>taglist;
-	cd $i;
-	git checkout $active_branch;
-        git pull;
-	git merge devel;
-	#git status;
-	git describe; 
-	git describe>>../taglist; 
-	cd ..
-done
+echo -n >taglist
+while read ln; do
+    repo=`echo $ln|cut -d':' -f1`;
+    tag=`echo $ln|cut -d':' -f2`;
+    cd $repo
+    git checkout master
+    git merge $tag
+    git push
+    nt=`git describe`
+    echo "$repo:$nt">>../taglist
+    cd ..
+done <postontag
