@@ -27,6 +27,7 @@ quotedceda=`echo "dist.ceda.ac.uk/esgf"|sed 's/[./*?|]/\\\\&/g'`;
 quotedaims=`echo "aims1.llnl.gov/esgf"|sed 's/[./*?|]/\\\\&/g'`;
 quotedliu=`echo "esg-dn2.nsc.liu.se/esgf"|sed 's/[./*?|]/\\\\&/g'`;
 
+cp postontag postontag-${script_maj_version}.${script_sub_version}_`date +%Y-%m-%d`
 esgf_dist_mirrors_list=("dist.ceda.ac.uk/esgf" "aims1.llnl.gov/esgf" "esg-dn2.nsc.liu.se/esgf")
 echo -n >listoffiles;
 #Create dictionary of components
