@@ -31,7 +31,7 @@ for i in "${fulllist[@]}"; do
 	git describe; 
 	git describe>>../taglist;
 	echo -e "\n" >>../taglist;
-    ontag=`git describe|cut -d '-' -f1`;
+    ontag=`git describe --abbrev=0`;
     echo "$i:$ontag" >>../ontags
     if [ "$i" != "esgf-installer" ]; then
         git checkout $ontag
