@@ -44,6 +44,7 @@ make_symlinks(){
         ln -s ../../../thirdparty thirdparty
         ln -s ../../../etc etc
         ln -s ../../../utils utils
+        ln -s ../../../ferret ferret
 
     else
 
@@ -59,6 +60,7 @@ make_symlinks(){
         ln -s ../../thirdparty thirdparty
         ln -s ../../etc etc
         ln -s ../../utils utils
+        ln -s ../../ferret ferret
 
     fi
 
