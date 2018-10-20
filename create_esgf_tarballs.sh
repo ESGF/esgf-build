@@ -118,12 +118,6 @@ for i in "${!components[@]}"; do
                 cat esg-bootstrap|sed "s/$quotedipsl/$quotedceda/" >esg-bootstrap.ceda && md5sum esg-bootstrap.ceda >esg-bootstrap.ceda.md5
                 cat esg-bootstrap|sed "s/$quotedipsl/$quotedaims/" >esg-bootstrap.aims && md5sum esg-bootstrap.aims >esg-bootstrap.aims.md5
 			fi
-			if [ "$f" = "esg-product-server" ]; then
-				echo "Found esg-product-server"
-				sed -i "s/\(script_version=\"$quotedsv\"\)/script_version=\"$quotedreplsv\"/" esg-product-server;
-				sed -i "s/\(script_maj_version=\"$quotedmj\"\)/script_maj_version=\"$quotedreplsmv\"/" esg-product-server;
-				sed -i "s/\(script_sub_version=\"$quotedsubv\"\)/script_sub_version=\"$quotedreplssv\"/" esg-product-server;
-			fi
 			#Create md5sum of file
 			md5sum $f >$f.md5;
 		fi
