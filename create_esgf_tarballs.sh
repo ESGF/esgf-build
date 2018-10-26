@@ -84,9 +84,15 @@ for i in "${!components[@]}"; do
 	rm temp-dists/$script_maj_version/$script_sub_version/$i/ivy*.xml;
     
     if [ "$i" = "filters" ]; then #special handling for the filters files
-        pushd tempdists/$script_maj_version/$script_sub_version/$i
+        cp -r filters/* temp-dists/$script_maj_version/$script_sub_version/$i/    
+	    pushd temp-dists/$script_maj_version/$script_sub_version/$i || exit;
         rm -rf .git;
-        for f in `find . -type f`; do md5sum $f >$f.md5; done
+        for f in `find . -type f`; do
+            if echo $f|grep md5 >/dev/null; then
+                continue;
+            fi
+            md5sum $f >$f.md5; 
+        done
         popd;
     fi
 
@@ -107,6 +113,7 @@ for i in "${!components[@]}"; do
 	for f in *; do
         if [ "$i" = "filters" ]; then #we have already handled for the files in the filters directory
             break;
+        fi
 		#if file is a md5 hash; bypass it if so
 		if echo $f|grep md5 >/dev/null; then
 			echo "Skipping md5 file"
