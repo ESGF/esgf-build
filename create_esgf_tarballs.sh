@@ -42,7 +42,7 @@ components[esg-orp]='bin/esg-orp INSTALL README LICENSE etc/conf/esg-orp.propert
 components[esgf-getcert]='INSTALL README LICENSE'
 components[esg-search]='bin/esg-search bin/esgf-crawl bin/esgf-optimize-index etc/conf/jetty/jetty.xml-auth etc/conf/jetty/realm.properties etc/conf/solr/schema.xml etc/conf/solr/solrconfig.xml etc/conf/solr/solrconfig.xml-replica etc/conf/solr/solr.xml-master etc/conf/solr/solr.xml-slave etc/conf/jetty/webdefault.xml-auth INSTALL README LICENSE solr-home.tar etc/conf/solr/log4j.properties'
 components[esgf-product-server]='esg-las-config esg-product-server las_tds.xml.tmpl threddsConfig.xml.las'
-components[filters]='esg-access-logging-filter esg-drs-resolving-filter esg-security-las-ip-filter esg-security-tokenless-filters commons-httpclient-3.1.jar commons-lang-2.6.jar esg-security-tokenless-thredds-filters.xml jdom-legacy-1.1.3.jar esg-security-las-ip-filter.xml esapi-2.1.0.1.jar joda-time-2.2.jar not-yet-commons-ssl-0.3.9.jar opensaml-2.6.6.jar openws-1.5.6.jar slf4j-api-1.7.6.jar xmlsec-1.5.7.jar xmltooling-1.4.6.jar tds-extrajars.txt'
+components[filters]='dummylist'
 components[esgf-cog]='esg-cog'
 components[esgf-stats-api]='bin/esg_stats-api_v2 dist/esgf-stats-api.war'
 
@@ -66,7 +66,7 @@ mkdir esgf-cog 2>/dev/null
 cp esgf-installer/product-server/* esgf-product-server/
 cp esgf-installer/cog/esg-cog esgf-cog
 cp esgf-installer/filters/* filters/
-cp dep-filters/* filters/
+cp -r dep-filters/* filters/
 pushd esg-search/etc/conf
 tar -cf solr-home.tar solr-home
 popd
@@ -82,6 +82,13 @@ for i in "${!components[@]}"; do
 	cp $i/dist/* temp-dists/$script_maj_version/$script_sub_version/$i/;
 	#Remove the ivy* files from temp-dists that just got copied over
 	rm temp-dists/$script_maj_version/$script_sub_version/$i/ivy*.xml;
+    
+    if [ "$i" = "filters" ]; then #special handling for the filters files
+        pushd tempdists/$script_maj_version/$script_sub_version/$i
+        rm -rf .git;
+        for f in `find . -type f`; do md5sum $f >$f.md5; done
+        popd;
+    fi
 
 	for file in ${components[$i]}; do
 		if [ ! -e $i/$file ]; then
@@ -98,6 +105,8 @@ for i in "${!components[@]}"; do
 	pushd temp-dists/$script_maj_version/$script_sub_version/$i || exit;
 
 	for f in *; do
+        if [ "$i" = "filters" ]; then #we have already handled for the files in the filters directory
+            break;
 		#if file is a md5 hash; bypass it if so
 		if echo $f|grep md5 >/dev/null; then
 			echo "Skipping md5 file"
