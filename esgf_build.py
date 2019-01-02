@@ -1,5 +1,5 @@
 #!usr/bin/env python
-'''Modules needed mostly to access terminal commands'''
+"""Modules needed mostly to access terminal commands."""
 import subprocess
 import shlex
 import os
@@ -11,25 +11,8 @@ import mmap
 from git import Repo
 import repo_info
 import build_utilities
-import purge_and_clone_fresh_repos
-import datetime
 import semver
 from github_release import gh_release_create, gh_asset_upload, get_releases
-
-######IMPORTANT################################################################
-# Everything works and is tested up to update node and upload.
-# Still need to try and eliminate tarballs entirely, eliminate hard-coded
-# script settings in esg-node, use subprocess to set java and python paths,
-# remove ivy.xml, etc.
-#
-# Current idea was to replace build_list with repo_info.CREATE_DIRECTORY_LIST
-# in create_local_mirror_directory and create_esgf_tarballs function in order to
-# set up esgf-installer which is needed in line 162 onward.
-#
-# esgf_upload remains un-tested and is a direct copy of the bash script
-# into a subprocess.
-
-
 from git import RemoteProgress
 
 logger = logging.basicConfig(level=logging.DEBUG,
@@ -43,9 +26,11 @@ class ProgressPrinter(RemoteProgress):
 
 
 def get_latest_tag(repo):
-    '''accepts a GitPython Repo object and returns the latest annotated tag '''
-    # provides all the tags, reverses them (so that you can get the latest
-    # tag) and then takes only the first from the list
+    """Accept a GitPython Repo object and returns the latest annotated tag.
+
+    Provides all the tags, reverses them (so that you can get the latest
+    tag) and then takes only the first from the list.
+    """
     tag_list = repo.tags
     print "tag_list:", tag_list
     latest_tag = str(tag_list[-1])
@@ -53,7 +38,7 @@ def get_latest_tag(repo):
 
 
 def create_taglist_file(taglist_file, repo_name, latest_tag):
-    ''' Creates a file containing the latest tag for each repo '''
+    """Create a file containing the latest tag for each repo."""
     taglist_file.write("-------------------------\n")
     taglist_file.write(repo_name + "\n")
     taglist_file.write("-------------------------\n")
@@ -75,7 +60,7 @@ def create_commits_since_last_tag_file(commits_since_last_tag_file, repo_name, l
 
 
 def update_repo(repo_name, repo_object, active_branch):
-    ''' accepts a GitPython Repo object and updates the specified branch '''
+    """Accept a GitPython Repo object and updates the specified branch."""
     print "Checkout {repo_name}'s {active_branch} branch".format(repo_name=repo_name, active_branch=active_branch)
     repo_object.git.checkout(active_branch)
     progress_printer = ProgressPrinter()
@@ -125,10 +110,7 @@ def update_all(active_branch, repo_directory):
 
 
 def build_all(build_list, starting_directory):
-    '''Takes a list of repositories to build, and uses ant to build them '''
-    # TODO: use subprocess w/ bash command to set the java and python paths
-    # TODO: add loading bar while ant runs?
-    # TODO: include installer in build script for final version
+    """Take a list of repositories to build, and uses ant to build them."""
     # TODO: Remove ivy.xml directory?
     ant_path = find_executable('ant')
 
@@ -142,22 +124,22 @@ def build_all(build_list, starting_directory):
 
         # repos getcert and stats-api do not need an ant pull call
         if repo == 'esgf-getcert':
-            #clean and dist only
+            # clean and dist only
             clean_log = log_directory + "/" + repo + "-clean.log"
             with open(clean_log, "w") as fgc1:
-                # build_utilities.stream_subprocess_output('{ant} clean'.format(ant=ant_path), fgc1)
                 clean_output = build_utilities.call_binary("ant", ["clean"])
                 fgc1.write(clean_output)
 
             build_log = log_directory + "/" + repo + "-build.log"
 
-            # with open(build_log, "w") as fgc2:
-            #     build_utilities.stream_subprocess_output('{ant} dist'.format(ant=ant_path), fgc2)
+            with open(build_log, "w") as fgc2:
+                build_output = build_utilities.call_binary("ant", ["dist"])
+                fgc2.write(build_output)
             os.chdir("..")
             continue
 
         if repo == 'esgf-stats-api':
-            #clean and make_dist only
+            # clean and make_dist only
             clean_log = log_directory + "/" + repo + "-clean.log"
             with open(clean_log, "w") as fsapi1:
                 build_utilities.stream_subprocess_output(
@@ -169,8 +151,8 @@ def build_all(build_list, starting_directory):
             os.chdir('..')
             continue
 
-        #clean, build, and make_dist
-        #TODO: Add publish step
+        # clean, build, and make_dist
+        # TODO: Add publish step
         clean_log = log_directory + "/" + repo + "-clean.log"
         with open(clean_log, "w") as file1:
             clean_all_output = build_utilities.call_binary("ant", ["clean_all"])
@@ -181,7 +163,6 @@ def build_all(build_list, starting_directory):
             file2.write(pull_output)
         build_log = log_directory + "/" + repo + "-build.log"
         with open(build_log, "w") as file3:
-            # build_utilities.stream_subprocess_output("{ant} make_dist".format(ant=ant_path), file3)
             make_dist_output = build_utilities.call_binary("ant", ["make_dist"])
             file3.write(make_dist_output)
         os.chdir("..")
@@ -204,9 +185,9 @@ def build_all(build_list, starting_directory):
 
 
 def copy_artifacts_to_local_mirror(esgf_artifact_directory):
-    ''' The web artifacts (jars and wars) get placed at
+    """The web artifacts (jars and wars) get placed at
     ~/.ivy2/local/esgf-artifacts/ after running the ant builds. This function
-    copies them to the local mirror'''
+    copies them to the local mirror"""
     local_artifacts_directory = os.path.join(os.environ["HOME"], ".ivy2", "local", "esgf-artifacts")
     try:
         shutil.copytree(local_artifacts_directory, esgf_artifact_directory)
@@ -216,11 +197,8 @@ def copy_artifacts_to_local_mirror(esgf_artifact_directory):
 
 
 def create_local_mirror_directory(active_branch, starting_directory, build_list, script_major_version):
-    '''Creates a directory for ESGF binaries that will get RSynced and uploaded to the remote distribution mirrors'''
-    # if active_branch is devel then copy to dist folder for devel
-    # if active_branch is master then copy to dist folder
+    """Create a directory for ESGF binaries that will get RSynced and uploaded to the remote distribution mirrors."""
     print "\nCreating local mirror directory."
-    print "starting_directory:", starting_directory
 
     esgf_binary_directory = os.path.join(starting_directory, 'esgf_binaries')
     build_utilities.mkdir_p(esgf_binary_directory)
@@ -252,7 +230,7 @@ def bump_tag_version(repo, current_version):
 
 
 def esgf_upload(starting_directory, build_list):
-    '''Uses rsync to upload to coffee server'''
+    """Uses rsync to upload to coffee server"""
     print "attempting upload"
     print "build list in upload:", build_list
     for repo in build_list:
@@ -275,7 +253,7 @@ def esgf_upload(starting_directory, build_list):
 
 
 def create_build_list(build_list, select_repo, all_repos_opt):
-    '''Creates a list of repos to build depending on a menu that the user picks from'''
+    """Creates a list of repos to build depending on a menu that the user picks from"""
 
     # If the user has indicated that all repos should be built, then the repos
     # from the repo list in repo info is purged of exclusions and set as the build_list
@@ -313,20 +291,8 @@ def create_build_list(build_list, select_repo, all_repos_opt):
         print "\n"
 
 
-def set_script_settings(default_script_q, script_settings_local):
-    '''Sets the script settings depending on input or default'''
-    if default_script_q.lower() not in ['y', 'yes', '']:
-        script_settings_local['script_major_version'] = raw_input("Please set the"
-                                                                  + " script_major_version: ")
-        script_settings_local['script_release'] = raw_input("Please set the script_release: ")
-        script_settings_local['script_version'] = raw_input("Please set the script version: ")
-        return script_settings_local
-    print "Using default script settings."
-    return repo_info.SCRIPT_INFO.copy()
-
-
 def find_path_to_repos(starting_directory):
-    '''Checks the path provided to the repos to see if it exists'''
+    """Checks the path provided to the repos to see if it exists"""
     if os.path.isdir(os.path.realpath(starting_directory)):
         starting_directory = os.path.realpath(starting_directory)
         return True
@@ -344,14 +310,14 @@ def find_path_to_repos(starting_directory):
 
 
 def get_most_recent_commit(repo_handle):
-    '''Gets the most recent commit w/ log and list comprehension'''
+    """Gets the most recent commit w/ log and list comprehension"""
     repo_handle.git.log()
     mst_rcnt_cmmt = repo_handle.git.log().split("\ncommit")[0]
     return mst_rcnt_cmmt
 
 
 def main():
-    '''User prompted for build specifications and functions for build are called'''
+    """User prompted for build specifications and functions for build are called"""
     build_list = []
     select_repo = []
     script_settings_local = {}
@@ -394,18 +360,6 @@ def main():
                 logger.error(error)
                 print "Invalid entry, please enter repos to build."
                 continue
-
-    # Ask the user if they want to use default script settings, if yes call the
-    # set_script_settings function
-    print ("Default Script Settings: \n"
-           + 'SCRIPT_MAJOR_VERSION = ' + repo_info.SCRIPT_INFO['script_major_version'] + "\n"
-           + 'SCRIPT_RELEASE = ' + repo_info.SCRIPT_INFO['script_release'] + "\n"
-           + 'SCRIPT_VERSION = ' + repo_info.SCRIPT_INFO['script_version'])
-
-    default_script_q = raw_input("\nDo you want to use the default script settings? (Y or YES): ")
-    script_settings_local = set_script_settings(default_script_q, script_settings_local)
-    print script_settings_local
-    print "Script settings set."
 
     build_all(build_list, starting_directory)
 
