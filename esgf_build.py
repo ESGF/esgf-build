@@ -14,6 +14,7 @@ import build_utilities
 import semver
 from github_release import gh_release_create, gh_asset_upload, get_releases
 from git import RemoteProgress
+from plumbum.commands import ProcessExecutionError
 
 logger = logging.basicConfig(level=logging.DEBUG,
                              format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -31,9 +32,17 @@ def get_latest_tag(repo):
     Provides all the tags, reverses them (so that you can get the latest
     tag) and then takes only the first from the list.
     """
-    tag_list = repo.tags
-    print "tag_list:", tag_list
-    latest_tag = str(tag_list[-1])
+    # A tag can point to a blob and the loop prunes blob tags from the list of tags to be sorted
+    tag_list = []
+    for bar in repo.tags:
+        try:
+            bar.commit.committed_datetime
+        except ValueError:
+            pass
+        else:
+            tag_list.append(bar)
+    sorted_tags = sorted(tag_list, key=lambda t: t.commit.committed_datetime)
+    latest_tag = str(sorted_tags[-1])
     return latest_tag
 
 
@@ -61,11 +70,21 @@ def create_commits_since_last_tag_file(commits_since_last_tag_file, repo_name, l
 
 def update_repo(repo_name, repo_object, active_branch):
     """Accept a GitPython Repo object and updates the specified branch."""
-    print "Checkout {repo_name}'s {active_branch} branch".format(repo_name=repo_name, active_branch=active_branch)
-    repo_object.git.checkout(active_branch)
-    progress_printer = ProgressPrinter()
-    repo_object.remotes.origin.pull("{active_branch}:{active_branch}".format(
-        active_branch=active_branch), progress=progress_printer)
+    if active_branch == "latest":
+        active_tag = get_latest_tag(repo_object)
+        print "Checkout {repo_name}'s {active_tag} tag".format(repo_name=repo_name, active_tag=active_tag)
+        try:
+            build_utilities.call_binary("git", ["checkout", active_tag, "-b", active_tag])
+        except ProcessExecutionError, err:
+            if err.retcode == 128:
+                pass
+    else:
+        print "Checkout {repo_name}'s {active_branch} branch".format(repo_name=repo_name, active_branch=active_branch)
+        repo_object.git.checkout(active_branch)
+
+        progress_printer = ProgressPrinter()
+        repo_object.remotes.origin.pull("{active_branch}:{active_branch}".format(
+            active_branch=active_branch), progress=progress_printer)
     print "Updating: " + repo_name
 
 
@@ -78,7 +97,7 @@ def clone_repo(repo, repo_directory):
     print(repo + " successfully cloned -> {repo_path}".format(repo_path=repo_path))
 
 
-def update_all(active_branch, repo_directory):
+def update_all(active_branch, repo_directory, build_list):
     """Check each repo in the REPO_LIST for the most updated branch, and uses taglist to track versions."""
     print "Beginning to update directories."
 
@@ -86,7 +105,7 @@ def update_all(active_branch, repo_directory):
         repo_directory, "commits_since_last_tag.txt"), "w")
     taglist_file = open(os.path.join(repo_directory, "taglist.txt"), "w+")
 
-    for repo in repo_info.ALL_REPO_URLS.keys():
+    for repo in build_list:
         try:
             os.chdir(repo_directory + "/" + repo)
         except OSError:
@@ -230,8 +249,17 @@ def bump_tag_version(repo, current_version):
 
 
 def esgf_upload(starting_directory, build_list):
-    """Uses rsync to upload to coffee server"""
-    print "attempting upload"
+    """Upload binaries to GitHub release as assets."""
+    while True:
+        upload_assets = raw_input("Would you like to upload the binary assets to GitHub? [Y/n]: ") or "y"
+        if upload_assets.lower() in ["n", "no"]:
+            return
+        elif upload_assets.lower() in ["y", "yes"]:
+            print "attempting upload"
+            break
+        else:
+            print "Please enter a valid selection."
+
     print "build list in upload:", build_list
     for repo in build_list:
         print "repo:", repo
@@ -242,12 +270,15 @@ def esgf_upload(starting_directory, build_list):
         bump_version = raw_input("Would you like to bump the version number of {} [Y/n]".format(repo)) or "yes"
         if bump_version.lower() in ["y", "yes"]:
             new_tag = bump_tag_version(repo, latest_tag)
-            gh_release_create("ESGF/esgf-dashboard", "v{}".format(new_tag), publish=True, name="Testing upload", asset_pattern="../esgf_repos/esgf-dashboard/dist/*")
+            gh_release_create("ESGF/{}".format(repo), "{}".format(new_tag), publish=True, name="Testing upload", asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
         else:
             print "get releases:"
-            print get_releases("ESGF/{}".format(repo))
-            print "Updating the assets for the latest tag {}".format(latest_tag)
-            gh_asset_upload("ESGF/{}".format(repo), latest_tag, "../esgf_repos/{}/dist/*".format(repo), dry_run=False, verbose=False)
+            if latest_tag in get_releases("ESGF/{}".format(repo)):
+                print "Updating the assets for the latest tag {}".format(latest_tag)
+                gh_asset_upload("ESGF/{}".format(repo), latest_tag, "{}/{}/dist/*".format(starting_directory, repo), dry_run=False, verbose=False)
+            else:
+                print "Creating release version {} for {}".format(latest_tag, repo)
+                gh_release_create("ESGF/{}".format(repo), "{}".format(latest_tag), publish=True, name="Testing upload", asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
 
     print "Upload completed!"
 
@@ -317,16 +348,15 @@ def get_most_recent_commit(repo_handle):
 
 
 def main():
-    """User prompted for build specifications and functions for build are called"""
+    """User prompted for build specifications and functions for build are called."""
     build_list = []
     select_repo = []
-    script_settings_local = {}
 
     while True:
-        active_branch = raw_input("Do you want to update devel or master branch? ")
+        active_branch = raw_input("Enter a branch name or tag name to checkout for the build. Valid options are 'devel' for the devel branch, 'master' for the master branch, or 'latest' for the latest tag: ")
 
-        if active_branch.lower() not in ["devel", "master"]:
-            print "Please choose either master or devel."
+        if active_branch.lower() not in ["devel", "master", "latest"]:
+            print "Please choose either master, devel, or latest."
             continue
         else:
             break
@@ -336,8 +366,6 @@ def main():
                                        " repositories on your system: ").strip()
         if find_path_to_repos(starting_directory):
             break
-
-    update_all(active_branch, starting_directory)
 
     # Use a raw_input statement to ask which repos should be built, then call
     # the create_build_list with all_repos_opt set to either True or False
@@ -361,8 +389,8 @@ def main():
                 print "Invalid entry, please enter repos to build."
                 continue
 
+    update_all(active_branch, starting_directory, build_list)
     build_all(build_list, starting_directory)
-
     esgf_upload(starting_directory, build_list)
 
 
