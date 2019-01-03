@@ -267,10 +267,11 @@ def esgf_upload(starting_directory, build_list):
         repo_handle = Repo(os.getcwd())
         latest_tag = get_latest_tag(repo_handle)
         print "latest_tag:", latest_tag
+        release_name = raw_input("Enter the title for this {} release: ".format(repo))
         bump_version = raw_input("Would you like to bump the version number of {} [Y/n]".format(repo)) or "yes"
         if bump_version.lower() in ["y", "yes"]:
             new_tag = bump_tag_version(repo, latest_tag)
-            gh_release_create("ESGF/{}".format(repo), "{}".format(new_tag), publish=True, name="Testing upload", asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
+            gh_release_create("ESGF/{}".format(repo), "{}".format(new_tag), publish=True, name=release_name, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
         else:
             print "get releases:"
             if latest_tag in get_releases("ESGF/{}".format(repo)):
@@ -278,7 +279,7 @@ def esgf_upload(starting_directory, build_list):
                 gh_asset_upload("ESGF/{}".format(repo), latest_tag, "{}/{}/dist/*".format(starting_directory, repo), dry_run=False, verbose=False)
             else:
                 print "Creating release version {} for {}".format(latest_tag, repo)
-                gh_release_create("ESGF/{}".format(repo), "{}".format(latest_tag), publish=True, name="Testing upload", asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
+                gh_release_create("ESGF/{}".format(repo), "{}".format(latest_tag), publish=True, name=release_name, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
 
     print "Upload completed!"
 
