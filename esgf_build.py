@@ -3,11 +3,9 @@
 import subprocess
 import shlex
 import os
-import shutil
 import logging
-import glob
+import datetime
 from distutils.spawn import find_executable
-import mmap
 from git import Repo
 import repo_info
 import build_utilities
@@ -22,7 +20,10 @@ logger = logging.getLogger("esgf_build")
 
 
 class ProgressPrinter(RemoteProgress):
+    """Print the progress of cloning from GitHub on the command line."""
+
     def update(self, op_code, cur_count, max_count=None, message=''):
+        """Print progress update message."""
         print op_code, cur_count, max_count, cur_count / (max_count or 100.0), message or "NO MESSAGE"
 
 
@@ -56,6 +57,7 @@ def create_taglist_file(taglist_file, repo_name, latest_tag):
 
 
 def create_commits_since_last_tag_file(commits_since_last_tag_file, repo_name, latest_tag):
+    """Create a file with a list of commits that have been pushed since the last tag was cut."""
     commits_since_tag = subprocess.check_output(shlex.split(
         "git log {latest_tag}..HEAD".format(latest_tag=latest_tag)))
     if commits_since_tag:
@@ -187,47 +189,28 @@ def build_all(build_list, starting_directory):
         os.chdir("..")
 
     print "\nRepository builds complete."
-
-    #TODO: extract to separate function
-    #TODO: list clean, pull, and publish logs as well
-    print "Finding esgf log files.\n"
-
-    # uses glob to find all esgf log files then iterates over the log files ,
-    # opens them and uses a mmap object to search through for BUILD reference
-    # returns the ones with BUILD references to be checked by a script during build
-    all_logs = glob.glob('buildlogs/esg*-*-build.log')
-    for log in all_logs:
-        with open(log) as flog:
-            mmap_object = mmap.mmap(flog.fileno(), 0, access=mmap.ACCESS_READ)
-            if mmap_object.find('BUILD') != -1:
-                return log
+    create_build_history(build_list)
 
 
-def copy_artifacts_to_local_mirror(esgf_artifact_directory):
-    """The web artifacts (jars and wars) get placed at
-    ~/.ivy2/local/esgf-artifacts/ after running the ant builds. This function
-    copies them to the local mirror"""
-    local_artifacts_directory = os.path.join(os.environ["HOME"], ".ivy2", "local", "esgf-artifacts")
-    try:
-        shutil.copytree(local_artifacts_directory, esgf_artifact_directory)
-    except OSError, error:
-        shutil.rmtree(esgf_artifact_directory)
-        shutil.copytree(local_artifacts_directory, esgf_artifact_directory)
-
-
-def create_local_mirror_directory(active_branch, starting_directory, build_list, script_major_version):
-    """Create a directory for ESGF binaries that will get RSynced and uploaded to the remote distribution mirrors."""
-    print "\nCreating local mirror directory."
-
-    esgf_binary_directory = os.path.join(starting_directory, 'esgf_binaries')
-    build_utilities.mkdir_p(esgf_binary_directory)
-    build_utilities.mkdir_p(esgf_artifact_directory)
-
-    copy_artifacts_to_local_mirror(esgf_artifact_directory)
+def create_build_history(build_list):
+    """Create a directory to keep a history of the build logs."""
+    # TODO: list clean, pull, and publish logs as well
+    build_history_file = open("buildlogs/build_history_{}.log".format(datetime.date.today()), "a")
+    build_history_file.write("Build Time: {}\n".format(str(datetime.datetime.now())))
+    build_history_file.write("-----------------------------------------------------\n")
+    for repo in build_list:
+        build_log = 'buildlogs/{}-build.log'.format(repo)
+        print "log_file:", build_log
+        for line in reversed(open(build_log).readlines()):
+            if "BUILD" in line:
+                build_history_file.write("{}: {}".format(repo, line.rstrip()))
+                build_history_file("\n")
+                break
+    build_history_file.close()
 
 
 def bump_tag_version(repo, current_version):
-    """Use semver to bump the tag version."""
+    """Bump the tag version using semantic versioning."""
     print '----------------------------------------\n'
     print '0: Bump major version {} -> {} \n'.format(current_version, semver.bump_major(current_version))
     print '1: Bump minor version {} -> {} \n'.format(current_version, semver.bump_minor(current_version))
@@ -285,36 +268,22 @@ def esgf_upload(starting_directory, build_list):
 
 
 def create_build_list(build_list, select_repo, all_repos_opt):
-    """Creates a list of repos to build depending on a menu that the user picks from"""
-
-    # If the user has indicated that all repos should be built, then the repos
-    # from the repo list in repo info is purged of exclusions and set as the build_list
+    """Create a list of repos to build depending on a menu that the user picks from."""
     if all_repos_opt is True:
         build_list = repo_info.REPO_LIST
-        for repo in build_list:
-            if repo in repo_info.REPOS_TO_EXCLUDE:
-                print "EXCLUSION FOUND: " + repo
-                build_list.remove(repo)
-                continue
         print "Building repos: " + str(build_list)
         print "\n"
         return
 
     # If the user has selcted the repos to build, the indexes are used to select
-    # the repo names from the menu , any selected repos on the exclusion list are
-    # purged, and the rest are appened to the build_list
+    # the repo names from the menu and they are appended to the build_list
     select_repo_list = select_repo.split(',')
     print "select_repo_list:", select_repo_list
     select_repo_map = map(int, select_repo_list)
     print "select_repo_map:", select_repo_map
     for repo_num in select_repo_map:
         repo_name = repo_info.REPO_LIST[repo_num]
-
-        if repo_name in repo_info.REPOS_TO_EXCLUDE:
-            print "EXCLUSION FOUND: " + repo_name
-            continue
-        else:
-            build_list.append(repo_name)
+        build_list.append(repo_name)
     if not build_list:
         print "No applicable repos selected."
         exit()
@@ -324,13 +293,11 @@ def create_build_list(build_list, select_repo, all_repos_opt):
 
 
 def find_path_to_repos(starting_directory):
-    """Checks the path provided to the repos to see if it exists"""
+    """Check the path provided to the repos to see if it exists."""
     if os.path.isdir(os.path.realpath(starting_directory)):
         starting_directory = os.path.realpath(starting_directory)
         return True
-    create_path_q = raw_input("The path does not exist. Do you want "
-                              + starting_directory
-                              + " to be created? (Y or YES)") or "y"
+    create_path_q = raw_input("The path does not exist. Do you want {} to be created? (Y or YES)".format(starting_directory)) or "y"
     if create_path_q.lower() not in ["yes", "y"]:
         print "Not a valid response. Directory not created."
         return False
@@ -342,7 +309,7 @@ def find_path_to_repos(starting_directory):
 
 
 def get_most_recent_commit(repo_handle):
-    """Gets the most recent commit w/ log and list comprehension"""
+    """Get the most recent commit w/ log and list comprehension."""
     repo_handle.git.log()
     mst_rcnt_cmmt = repo_handle.git.log().split("\ncommit")[0]
     return mst_rcnt_cmmt
@@ -363,8 +330,7 @@ def main():
             break
 
     while True:
-        starting_directory = raw_input("Please provide the path to the" +
-                                       " repositories on your system: ").strip()
+        starting_directory = raw_input("Please provide the path to the repositories on your system: ").strip()
         if find_path_to_repos(starting_directory):
             break
 
