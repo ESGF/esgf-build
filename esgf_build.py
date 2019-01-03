@@ -204,7 +204,7 @@ def create_build_history(build_list):
         for line in reversed(open(build_log).readlines()):
             if "BUILD" in line:
                 build_history_file.write("{}: {}".format(repo, line.rstrip()))
-                build_history_file("\n")
+                build_history_file.write("\n")
                 break
     build_history_file.close()
 
