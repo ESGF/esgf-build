@@ -13,7 +13,7 @@
     ``` shell
     python esgf_build.py
     ```
-3. Choose which branch/tag you will be building from. Valid options are 'devel', 'master', or 'latest'. 'latest' builds from the most recent tag.
+3. Choose which branch/tag you will be building from. Valid options are ```devel```, ```master```, or ```latest```. 'latest' builds from the most recent tag.
 4. Enter the path to the directory containing repositories on the system.
     * Example:
     ``` shell
