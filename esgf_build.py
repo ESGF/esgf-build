@@ -163,12 +163,12 @@ def build_all(build_list, starting_directory):
             # clean and make_dist only
             clean_log = log_directory + "/" + repo + "-clean.log"
             with open(clean_log, "w") as fsapi1:
-                build_utilities.stream_subprocess_output(
-                    '{ant} clean_all'.format(ant=ant_path), fsapi1)
+                clean_all_output = build_utilities.call_binary("ant", ["clean_all"])
+                fsapi1.write(clean_all_output)
             build_log = log_directory + "/" + repo + "-build.log"
             with open(build_log, "w") as fsapi2:
-                build_utilities.stream_subprocess_output(
-                    "{ant} make_dist".format(ant=ant_path), fsapi2)
+                make_dist_output = build_utilities.call_binary("ant", ["make_dist"])
+                fsapi2.write(make_dist_output)
             os.chdir('..')
             continue
 
