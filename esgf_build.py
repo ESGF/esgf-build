@@ -5,7 +5,6 @@ import shlex
 import os
 import logging
 import datetime
-from distutils.spawn import find_executable
 from git import Repo
 import repo_info
 import build_utilities
@@ -130,11 +129,41 @@ def update_all(active_branch, repo_directory, build_list):
     print "Directory updates complete."
 
 
+def clean(repo, log_directory, clean_command="clean_all"):
+    """Run the clean directive from a repo's build script."""
+    clean_log = os.path.join(log_directory, repo + "-clean.log")
+    with open(clean_log, "w") as clean_log_file:
+        clean_output = build_utilities.call_binary("ant", [clean_command])
+        clean_log_file.write(clean_output)
+
+
+def pull(repo, log_directory, pull_command="pull"):
+    """Run the pull directive from a repo's build script."""
+    pull_log = log_directory + "/" + repo + "-pull.log"
+    with open(pull_log, "w") as pull_log_file:
+        pull_output = build_utilities.call_binary("ant", [pull_command])
+        pull_log_file.write(pull_output)
+
+
+def build(repo, log_directory, build_command="make_dist"):
+    """Run the build directive from a repo's build script."""
+    build_log = os.path.join(log_directory, repo + "-build.log")
+
+    with open(build_log, "w") as build_log_file:
+        build_output = build_utilities.call_binary("ant", [build_command])
+        build_log_file.write(build_output)
+
+
+def publish_local(repo, log_directory, publish_command="publish_local"):
+    """Run the publish local directive from a repo's build script."""
+    publish_local_log = log_directory + "/" + repo + "-publishlocal.log"
+    with open(publish_local_log, "w") as publish_local_log_file:
+        publish_local_output = build_utilities.call_binary("ant", [publish_command])
+        publish_local_log_file.write(publish_local_output)
+
+
 def build_all(build_list, starting_directory):
     """Take a list of repositories to build, and uses ant to build them."""
-    # TODO: Remove ivy.xml directory?
-    ant_path = find_executable('ant')
-
     log_directory = starting_directory + "/buildlogs"
     if not os.path.exists(log_directory):
         os.makedirs(log_directory)
@@ -146,49 +175,23 @@ def build_all(build_list, starting_directory):
         # repos getcert and stats-api do not need an ant pull call
         if repo == 'esgf-getcert':
             # clean and dist only
-            clean_log = log_directory + "/" + repo + "-clean.log"
-            with open(clean_log, "w") as fgc1:
-                clean_output = build_utilities.call_binary("ant", ["clean"])
-                fgc1.write(clean_output)
-
-            build_log = log_directory + "/" + repo + "-build.log"
-
-            with open(build_log, "w") as fgc2:
-                build_output = build_utilities.call_binary("ant", ["dist"])
-                fgc2.write(build_output)
+            clean(repo, log_directory, clean_command="clean")
+            build(repo, log_directory, build_command="dist")
             os.chdir("..")
             continue
 
-        if repo == 'esgf-stats-api':
+        elif repo == 'esgf-stats-api':
             # clean and make_dist only
-            clean_log = log_directory + "/" + repo + "-clean.log"
-            with open(clean_log, "w") as fsapi1:
-                clean_all_output = build_utilities.call_binary("ant", ["clean_all"])
-                fsapi1.write(clean_all_output)
-            build_log = log_directory + "/" + repo + "-build.log"
-            with open(build_log, "w") as fsapi2:
-                make_dist_output = build_utilities.call_binary("ant", ["make_dist"])
-                fsapi2.write(make_dist_output)
+            clean(repo, log_directory)
+            build(repo, log_directory)
             os.chdir('..')
             continue
-
-        # clean, build, and make_dist, publish to local repo
-        clean_log = log_directory + "/" + repo + "-clean.log"
-        with open(clean_log, "w") as file1:
-            clean_all_output = build_utilities.call_binary("ant", ["clean_all"])
-            file1.write(clean_all_output)
-        pull_log = log_directory + "/" + repo + "-pull.log"
-        with open(pull_log, "w") as file2:
-            pull_output = build_utilities.call_binary("ant", ["pull"])
-            file2.write(pull_output)
-        build_log = log_directory + "/" + repo + "-build.log"
-        with open(build_log, "w") as file3:
-            make_dist_output = build_utilities.call_binary("ant", ["make_dist"])
-            file3.write(make_dist_output)
-            publish_local_log = log_directory + "/" + repo + "-publishlocal.log"
-            with open(publish_local_log, "w") as file4:
-                publish_local_output = build_utilities.call_binary("ant", ["publish_local"])
-                file4.write(publish_local_output)
+        else:
+            # clean, build, and make_dist, publish to local repo
+            clean(repo, log_directory)
+            pull(repo, log_directory)
+            build(repo, log_directory)
+            publish_local(repo, log_directory)
         os.chdir("..")
 
     print "\nRepository builds complete."
@@ -270,13 +273,13 @@ def esgf_upload(starting_directory, build_list):
     print "Upload completed!"
 
 
-def create_build_list(build_list, select_repo, all_repos_opt):
+def create_build_list(select_repo, all_repos_opt):
     """Create a list of repos to build depending on a menu that the user picks from."""
     if all_repos_opt is True:
         build_list = repo_info.REPO_LIST
         print "Building repos: " + str(build_list)
         print "\n"
-        return
+        return build_list
 
     # If the user has selcted the repos to build, the indexes are used to select
     # the repo names from the menu and they are appended to the build_list
@@ -284,6 +287,8 @@ def create_build_list(build_list, select_repo, all_repos_opt):
     print "select_repo_list:", select_repo_list
     select_repo_map = map(int, select_repo_list)
     print "select_repo_map:", select_repo_map
+
+    build_list = []
     for repo_num in select_repo_map:
         repo_name = repo_info.REPO_LIST[repo_num]
         build_list.append(repo_name)
@@ -293,6 +298,7 @@ def create_build_list(build_list, select_repo, all_repos_opt):
     else:
         print "Building repos: " + str(build_list)
         print "\n"
+        return build_list
 
 
 def find_path_to_repos(starting_directory):
@@ -320,9 +326,6 @@ def get_most_recent_commit(repo_handle):
 
 def main():
     """User prompted for build specifications and functions for build are called."""
-    build_list = []
-    select_repo = []
-
     while True:
         active_branch = raw_input("Enter a branch name or tag name to checkout for the build. Valid options are 'devel' for the devel branch, 'master' for the master branch, or 'latest' for the latest tag: ")
 
@@ -348,11 +351,11 @@ def main():
                 print "Not a valid response."
                 continue
             else:
-                create_build_list(build_list, select_repo, all_repos_opt=True)
+                build_list = create_build_list(select_repo, all_repos_opt=True)
                 break
         else:
             try:
-                create_build_list(build_list, select_repo, all_repos_opt=False)
+                build_list = create_build_list(select_repo, all_repos_opt=False)
                 break
             except (ValueError, IndexError), error:
                 logger.error(error)
