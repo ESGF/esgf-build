@@ -172,8 +172,7 @@ def build_all(build_list, starting_directory):
             os.chdir('..')
             continue
 
-        # clean, build, and make_dist
-        # TODO: Add publish step
+        # clean, build, and make_dist, publish to local repo
         clean_log = log_directory + "/" + repo + "-clean.log"
         with open(clean_log, "w") as file1:
             clean_all_output = build_utilities.call_binary("ant", ["clean_all"])
@@ -186,6 +185,10 @@ def build_all(build_list, starting_directory):
         with open(build_log, "w") as file3:
             make_dist_output = build_utilities.call_binary("ant", ["make_dist"])
             file3.write(make_dist_output)
+            publish_local_log = log_directory + "/" + repo + "-publishlocal.log"
+            with open(publish_local_log, "w") as file4:
+                publish_local_output = build_utilities.call_binary("ant", ["publish_local"])
+                file4.write(publish_local_output)
         os.chdir("..")
 
     print "\nRepository builds complete."
