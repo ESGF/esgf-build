@@ -152,3 +152,4 @@ for i in "${!components[@]}"; do
 		echo "$ln">>listoffiles;
 	done
 done
+cp listoffiles listoffiles-${script_maj_version}.${script_sub_version}_`date +%Y-%m-%d`
