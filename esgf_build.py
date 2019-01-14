@@ -9,6 +9,7 @@ from git import Repo
 import repo_info
 import build_utilities
 import semver
+import click
 from github_release import gh_release_create, gh_asset_upload, get_releases
 from git import RemoteProgress
 from plumbum.commands import ProcessExecutionError
@@ -324,8 +325,8 @@ def get_most_recent_commit(repo_handle):
     return mst_rcnt_cmmt
 
 
-def main():
-    """User prompted for build specifications and functions for build are called."""
+def choose_branch():
+    """Choose a git branch or tag name to checkout and build."""
     while True:
         active_branch = raw_input("Enter a branch name or tag name to checkout for the build. Valid options are 'devel' for the devel branch, 'master' for the master branch, or 'latest' for the latest tag: ")
 
@@ -334,14 +335,27 @@ def main():
             continue
         else:
             break
+    return active_branch
 
+
+def choose_directory():
+    """Choose the absolute path where the ESGF repos are located on your system.
+
+    If the repos do not currently exist in the given directory, they will be cloned into the directory.
+    """
     while True:
         starting_directory = raw_input("Please provide the path to the repositories on your system: ").strip()
         if find_path_to_repos(starting_directory):
             break
+    return starting_directory
 
-    # Use a raw_input statement to ask which repos should be built, then call
-    # the create_build_list with all_repos_opt set to either True or False
+
+def select_repos():
+    """Display a menu for a user to choose repos to be built.
+
+    Use a raw_input statement to ask which repos should be built, then call
+    the create_build_list with all_repos_opt set to either True or False
+    """
     print repo_info.REPO_MENU
     while True:
         select_repo = raw_input("Which repositories will be built? (Hit [Enter] for all) ")
@@ -361,6 +375,37 @@ def main():
                 logger.error(error)
                 print "Invalid entry, please enter repos to build."
                 continue
+    return build_list
+
+
+@click.command()
+@click.option('--branch', '-b', default=None, type=click.Choice(['devel', 'master', 'latest']), help='Name of the git branch or tag to checkout and build')
+@click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
+@click.argument('repos', default=None, nargs=-1, type=click.Choice(['esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
+def main(branch, directory, repos):
+    """User prompted for build specifications and functions for build are called."""
+    if not branch:
+        active_branch = choose_branch()
+    else:
+        active_branch = branch
+
+    print "Building {}".format(active_branch)
+
+    if not directory:
+        starting_directory = choose_directory()
+    else:
+        if find_path_to_repos(directory):
+            starting_directory = directory
+        else:
+            starting_directory = choose_directory()
+
+    print "Using build directory {}".format(starting_directory)
+    if repos:
+        build_list = repos
+    else:
+        build_list = select_repos()
+
+    print "build_list:", build_list
 
     update_all(active_branch, starting_directory, build_list)
     build_all(build_list, starting_directory)
