@@ -381,7 +381,7 @@ def select_repos():
 @click.command()
 @click.option('--branch', '-b', default=None, type=click.Choice(['devel', 'master', 'latest']), help='Name of the git branch or tag to checkout and build')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
-@click.argument('repos', default=None, nargs=-1, type=click.Choice(['esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
+@click.argument('repos', default=None, nargs=-1, type=click.Choice(['all', 'esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
 def main(branch, directory, repos):
     """User prompted for build specifications and functions for build are called."""
     if not branch:
@@ -401,7 +401,10 @@ def main(branch, directory, repos):
 
     print "Using build directory {}".format(starting_directory)
     if repos:
-        build_list = repos
+        if "all" in repos:
+            build_list = repo_info.REPO_LIST
+        else:
+            build_list = repos
     else:
         build_list = select_repos()
 
