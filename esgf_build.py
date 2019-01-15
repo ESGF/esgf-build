@@ -238,17 +238,20 @@ def bump_tag_version(repo, current_version):
             print "Invalid selection. Please make a valid selection."
 
 
-def esgf_upload(starting_directory, build_list):
+def esgf_upload(starting_directory, build_list, upload_flag):
     """Upload binaries to GitHub release as assets."""
-    while True:
-        upload_assets = raw_input("Would you like to upload the binary assets to GitHub? [Y/n]: ") or "y"
-        if upload_assets.lower() in ["n", "no"]:
-            return
-        elif upload_assets.lower() in ["y", "yes"]:
-            print "attempting upload"
-            break
-        else:
-            print "Please enter a valid selection."
+    if upload_flag is None:
+        while True:
+            upload_assets = raw_input("Would you like to upload the binary assets to GitHub? [Y/n]: ") or "y"
+            if upload_assets.lower() in ["n", "no"]:
+                return
+            elif upload_assets.lower() in ["y", "yes"]:
+                print "attempting upload"
+                break
+            else:
+                print "Please enter a valid selection."
+    elif not upload_flag:
+        return
 
     print "build list in upload:", build_list
     for repo in build_list:
@@ -381,8 +384,9 @@ def select_repos():
 @click.command()
 @click.option('--branch', '-b', default=None, type=click.Choice(['devel', 'master', 'latest']), help='Name of the git branch or tag to checkout and build')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
+@click.option('--upload', '-u', default='no', type=click.Choice(['yes', 'y', 'no', 'n']), help="Upload built assets to GitHub")
 @click.argument('repos', default=None, nargs=-1, type=click.Choice(['all', 'esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
-def main(branch, directory, repos):
+def main(branch, directory, repos, upload):
     """User prompted for build specifications and functions for build are called."""
     if not branch:
         active_branch = choose_branch()
@@ -412,7 +416,13 @@ def main(branch, directory, repos):
 
     update_all(active_branch, starting_directory, build_list)
     build_all(build_list, starting_directory)
-    esgf_upload(starting_directory, build_list)
+    if upload.lower in ["y", "yes"]:
+        upload_flag = True
+    elif upload.lower in ["n", "no"]:
+        upload_flag = False
+    else:
+        upload_flag = None
+    esgf_upload(starting_directory, build_list, upload_flag)
 
 
 if __name__ == '__main__':
