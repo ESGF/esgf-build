@@ -8,6 +8,7 @@
 
 ### To begin:
 1. Clone the esgf-build repo ```git clone https://github.com/ESGF/esgf-build.git ```
+   * Optional step: Create a conda environment or virtual environment for dependencies.
 2. Install the requirements using pip ```pip install -r requirements.txt```
 3. Run *esgf_build.py* by typing:
     ``` shell
