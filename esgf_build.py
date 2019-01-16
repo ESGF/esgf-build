@@ -216,7 +216,7 @@ def create_build_history(build_list):
     build_history_file.close()
 
 
-def bump_tag_version(repo, current_version):
+def bump_tag_version(repo, current_version, selection=None):
     """Bump the tag version using semantic versioning."""
     print '----------------------------------------\n'
     print '0: Bump major version {} -> {} \n'.format(current_version, semver.bump_major(current_version))
@@ -224,21 +224,23 @@ def bump_tag_version(repo, current_version):
     print '2: Bump patch version {} -> {} \n'.format(current_version, semver.bump_patch(current_version))
 
     while True:
-        selection = raw_input("Choose version number component to increment: ")
-        if selection == "0":
+        if not selection:
+            selection = raw_input("Choose version number component to increment: ")
+        if selection == "0" or selection == "major":
             return semver.bump_major(current_version)
             break
-        elif selection == "1":
+        elif selection == "1" or selection == "minor":
             return semver.bump_minor(current_version)
             break
-        elif selection == "2":
+        elif selection == "2" or selection == "patch":
             return semver.bump_patch(current_version)
             break
         else:
             print "Invalid selection. Please make a valid selection."
+            selection = None
 
 
-def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerelease_flag=False, dryrun=False):
+def esgf_upload(starting_directory, build_list, name, bump, upload_flag=False, prerelease_flag=False, dryrun=False):
     """Upload binaries to GitHub release as assets."""
     if not upload_flag:
         return
@@ -254,9 +256,8 @@ def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerele
         latest_tag = get_latest_tag(repo_handle)
         print "latest_tag:", latest_tag
 
-        bump_version = raw_input("Would you like to bump the version number of {} [Y/n]".format(repo)) or "yes"
-        if bump_version.lower() in ["y", "yes"]:
-            latest_tag = bump_tag_version(repo, latest_tag)
+        if bump:
+            latest_tag = bump_tag_version(repo, latest_tag, bump)
 
         if not name:
             release_name = latest_tag
@@ -379,16 +380,18 @@ def select_repos():
 
 @click.command()
 @click.option('--branch', '-b', default=None, type=click.Choice(['devel', 'master', 'latest']), help='Name of the git branch or tag to checkout and build')
+@click.option('--bump', '--bumpversion', default=None, type=click.Choice(['major', 'minor', 'patch']), help='Bump the version number according to the Semantic Versioning specification')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
 @click.option('--name', '-n', default=None, help="Name of the release")
 @click.option('--upload', '-u', is_flag=True, help="Upload built assets to GitHub")
 @click.option('--prerelease', '-p', is_flag=True, help="Tag release as prerelease")
 @click.option('--dryrun', '-r', is_flag=True, help="Perform a dry run of the release")
 @click.argument('repos', default=None, nargs=-1, type=click.Choice(['all', 'esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
-def main(branch, directory, repos, upload, prerelease, dryrun, name):
+def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
     """User prompted for build specifications and functions for build are called."""
     print "upload:", upload
     print "prerelease:", prerelease
+    print "bump:", bump
     if not branch:
         active_branch = choose_branch()
     else:
@@ -417,7 +420,7 @@ def main(branch, directory, repos, upload, prerelease, dryrun, name):
 
     update_all(active_branch, starting_directory, build_list)
     build_all(build_list, starting_directory)
-    esgf_upload(starting_directory, build_list, upload, prerelease, dryrun, name)
+    esgf_upload(starting_directory, build_list, name, bump, upload, prerelease, dryrun)
 
 
 if __name__ == '__main__':
