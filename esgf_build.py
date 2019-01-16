@@ -163,7 +163,7 @@ def publish_local(repo, log_directory, publish_command="publish_local"):
         publish_local_log_file.write(publish_local_output)
 
 
-def build_all(build_list, starting_directory):
+def build_all(build_list, starting_directory, bump):
     """Take a list of repositories to build, and uses ant to build them."""
     log_directory = starting_directory + "/buildlogs"
     if not os.path.exists(log_directory):
@@ -172,6 +172,11 @@ def build_all(build_list, starting_directory):
         print "Building repo: " + repo
         os.chdir(starting_directory + "/" + repo)
         logger.info(os.getcwd())
+        if bump:
+            repo_handle = Repo(os.getcwd())
+            latest_tag = get_latest_tag(repo_handle)
+            new_tag = bump_tag_version(repo, latest_tag, bump)
+            repo_handle.create_tag(new_tag, message='Updated {} version to tag "{}"'.format(bump, new_tag))
 
         # repos getcert and stats-api do not need an ant pull call
         if repo == 'esgf-getcert':
@@ -218,22 +223,22 @@ def create_build_history(build_list):
 
 def bump_tag_version(repo, current_version, selection=None):
     """Bump the tag version using semantic versioning."""
-    print '----------------------------------------\n'
-    print '0: Bump major version {} -> {} \n'.format(current_version, semver.bump_major(current_version))
-    print '1: Bump minor version {} -> {} \n'.format(current_version, semver.bump_minor(current_version))
-    print '2: Bump patch version {} -> {} \n'.format(current_version, semver.bump_patch(current_version))
-
+    current_version = current_version.replace("v", "")
     while True:
         if not selection:
+            print '----------------------------------------\n'
+            print '0: Bump major version {} -> {} \n'.format(current_version, semver.bump_major(current_version))
+            print '1: Bump minor version {} -> {} \n'.format(current_version, semver.bump_minor(current_version))
+            print '2: Bump patch version {} -> {} \n'.format(current_version, semver.bump_patch(current_version))
             selection = raw_input("Choose version number component to increment: ")
         if selection == "0" or selection == "major":
-            return semver.bump_major(current_version)
+            return "v" + semver.bump_major(current_version)
             break
         elif selection == "1" or selection == "minor":
-            return semver.bump_minor(current_version)
+            return "v" + semver.bump_minor(current_version)
             break
         elif selection == "2" or selection == "patch":
-            return semver.bump_patch(current_version)
+            return "v" + semver.bump_patch(current_version)
             break
         else:
             print "Invalid selection. Please make a valid selection."
@@ -243,7 +248,7 @@ def query_for_upload():
     pass
 
 
-def esgf_upload(starting_directory, build_list, name, bump, upload_flag=False, prerelease_flag=False, dryrun=False):
+def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerelease_flag=False, dryrun=False):
     """Upload binaries to GitHub release as assets."""
     if upload_flag is None:
         query_for_upload()
@@ -260,9 +265,6 @@ def esgf_upload(starting_directory, build_list, name, bump, upload_flag=False, p
         repo_handle = Repo(os.getcwd())
         latest_tag = get_latest_tag(repo_handle)
         print "latest_tag:", latest_tag
-
-        if bump:
-            latest_tag = bump_tag_version(repo, latest_tag, bump)
 
         if not name:
             release_name = latest_tag
@@ -424,8 +426,8 @@ def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
     print "build_list:", build_list
 
     update_all(active_branch, starting_directory, build_list)
-    build_all(build_list, starting_directory)
-    esgf_upload(starting_directory, build_list, name, bump, upload, prerelease, dryrun)
+    build_all(build_list, starting_directory, bump)
+    esgf_upload(starting_directory, build_list, name, upload, prerelease, dryrun)
 
 
 if __name__ == '__main__':
