@@ -238,20 +238,13 @@ def bump_tag_version(repo, current_version):
             print "Invalid selection. Please make a valid selection."
 
 
-def esgf_upload(starting_directory, build_list, upload_flag):
+def esgf_upload(starting_directory, build_list, upload_flag=False, prerelease_flag=False):
     """Upload binaries to GitHub release as assets."""
-    if upload_flag is None:
-        while True:
-            upload_assets = raw_input("Would you like to upload the binary assets to GitHub? [Y/n]: ") or "y"
-            if upload_assets.lower() in ["n", "no"]:
-                return
-            elif upload_assets.lower() in ["y", "yes"]:
-                print "attempting upload"
-                break
-            else:
-                print "Please enter a valid selection."
-    elif not upload_flag:
+    if not upload_flag:
         return
+
+    if prerelease_flag:
+        print "Marking as prerelease"
 
     print "build list in upload:", build_list
     for repo in build_list:
@@ -264,7 +257,7 @@ def esgf_upload(starting_directory, build_list, upload_flag):
         bump_version = raw_input("Would you like to bump the version number of {} [Y/n]".format(repo)) or "yes"
         if bump_version.lower() in ["y", "yes"]:
             new_tag = bump_tag_version(repo, latest_tag)
-            gh_release_create("ESGF/{}".format(repo), "{}".format(new_tag), publish=True, name=release_name, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
+            gh_release_create("ESGF/{}".format(repo), "{}".format(new_tag), publish=True, name=release_name, prerelease=prerelease_flag, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
         else:
             print "get releases:"
             if latest_tag in get_releases("ESGF/{}".format(repo)):
@@ -272,7 +265,7 @@ def esgf_upload(starting_directory, build_list, upload_flag):
                 gh_asset_upload("ESGF/{}".format(repo), latest_tag, "{}/{}/dist/*".format(starting_directory, repo), dry_run=False, verbose=False)
             else:
                 print "Creating release version {} for {}".format(latest_tag, repo)
-                gh_release_create("ESGF/{}".format(repo), "{}".format(latest_tag), publish=True, name=release_name, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
+                gh_release_create("ESGF/{}".format(repo), "{}".format(latest_tag), publish=True, name=release_name, prerelease=prerelease_flag, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
 
     print "Upload completed!"
 
@@ -384,10 +377,13 @@ def select_repos():
 @click.command()
 @click.option('--branch', '-b', default=None, type=click.Choice(['devel', 'master', 'latest']), help='Name of the git branch or tag to checkout and build')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
-@click.option('--upload', '-u', default='no', type=click.Choice(['yes', 'y', 'no', 'n']), help="Upload built assets to GitHub")
+@click.option('--upload', '-u', is_flag=True, help="Upload built assets to GitHub")
+@click.option('--prerelease', '-p', is_flag=True, help="Tag release as prerelease")
 @click.argument('repos', default=None, nargs=-1, type=click.Choice(['all', 'esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
-def main(branch, directory, repos, upload):
+def main(branch, directory, repos, upload, prerelease):
     """User prompted for build specifications and functions for build are called."""
+    print "upload:", upload
+    print "prerelease:", prerelease
     if not branch:
         active_branch = choose_branch()
     else:
@@ -416,13 +412,7 @@ def main(branch, directory, repos, upload):
 
     update_all(active_branch, starting_directory, build_list)
     build_all(build_list, starting_directory)
-    if upload.lower in ["y", "yes"]:
-        upload_flag = True
-    elif upload.lower in ["n", "no"]:
-        upload_flag = False
-    else:
-        upload_flag = None
-    esgf_upload(starting_directory, build_list, upload_flag)
+    esgf_upload(starting_directory, build_list, upload, prerelease)
 
 
 if __name__ == '__main__':
