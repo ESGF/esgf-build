@@ -237,10 +237,15 @@ def bump_tag_version(repo, current_version):
         else:
             print "Invalid selection. Please make a valid selection."
 
+def query_for_upload():
+    pass
+
 
 def esgf_upload(starting_directory, build_list, upload_flag=False, prerelease_flag=False, dryrun=False):
     """Upload binaries to GitHub release as assets."""
-    if not upload_flag:
+    if upload_flag is None:
+        query_for_upload()
+    elif not upload_flag:
         return
 
     if prerelease_flag:
@@ -377,7 +382,7 @@ def select_repos():
 @click.command()
 @click.option('--branch', '-b', default=None, type=click.Choice(['devel', 'master', 'latest']), help='Name of the git branch or tag to checkout and build')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
-@click.option('--upload', '-u', is_flag=True, help="Upload built assets to GitHub")
+@click.option('--upload/--no-upload', is_flag=True, default=None, help="Upload built assets to GitHub")
 @click.option('--prerelease', '-p', is_flag=True, help="Tag release as prerelease")
 @click.option('--dryrun', '-r', is_flag=True, help="Perform a dry run of the release")
 @click.argument('repos', default=None, nargs=-1, type=click.Choice(['all', 'esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
