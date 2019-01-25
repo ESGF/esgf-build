@@ -176,7 +176,7 @@ def publish_local(repo, log_directory, publish_command="publish_local"):
         publish_local_log_file.write(publish_local_output)
 
 
-def build_all(build_list, starting_directory):
+def build_all(build_list, starting_directory, bump):
     """Take a list of repositories to build, and uses ant to build them."""
     log_directory = starting_directory + "/buildlogs"
     if not os.path.exists(log_directory):
@@ -185,6 +185,11 @@ def build_all(build_list, starting_directory):
         print "Building repo: " + repo
         os.chdir(starting_directory + "/" + repo)
         logger.info(os.getcwd())
+        if bump:
+            repo_handle = Repo(os.getcwd())
+            latest_tag = get_latest_tag(repo_handle)
+            new_tag = bump_tag_version(repo, latest_tag, bump)
+            repo_handle.create_tag(new_tag, message='Updated {} version to tag "{}"'.format(bump, new_tag))
 
         # repos getcert and stats-api do not need an ant pull call
         if repo == 'esgf-getcert':
@@ -229,26 +234,28 @@ def create_build_history(build_list):
     build_history_file.close()
 
 
-def bump_tag_version(repo, current_version):
+def bump_tag_version(repo, current_version, selection=None):
     """Bump the tag version using semantic versioning."""
-    print '----------------------------------------\n'
-    print '0: Bump major version {} -> {} \n'.format(current_version, semver.bump_major(current_version))
-    print '1: Bump minor version {} -> {} \n'.format(current_version, semver.bump_minor(current_version))
-    print '2: Bump patch version {} -> {} \n'.format(current_version, semver.bump_patch(current_version))
-
+    current_version = current_version.replace("v", "")
     while True:
-        selection = raw_input("Choose version number component to increment: ")
-        if selection == "0":
-            return semver.bump_major(current_version)
+        if not selection:
+            print '----------------------------------------\n'
+            print '0: Bump major version {} -> {} \n'.format(current_version, semver.bump_major(current_version))
+            print '1: Bump minor version {} -> {} \n'.format(current_version, semver.bump_minor(current_version))
+            print '2: Bump patch version {} -> {} \n'.format(current_version, semver.bump_patch(current_version))
+            selection = raw_input("Choose version number component to increment: ")
+        if selection == "0" or selection == "major":
+            return "v" + semver.bump_major(current_version)
             break
-        elif selection == "1":
-            return semver.bump_minor(current_version)
+        elif selection == "1" or selection == "minor":
+            return "v" + semver.bump_minor(current_version)
             break
-        elif selection == "2":
-            return semver.bump_patch(current_version)
+        elif selection == "2" or selection == "patch":
+            return "v" + semver.bump_patch(current_version)
             break
         else:
             print "Invalid selection. Please make a valid selection."
+            selection = None
 
 
 def query_for_upload():
@@ -269,7 +276,7 @@ def query_for_upload():
     return upload
 
 
-def esgf_upload(starting_directory, build_list, upload_flag=False, prerelease_flag=False, dryrun=False):
+def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerelease_flag=False, dryrun=False):
     """Upload binaries to GitHub release as assets."""
     if upload_flag is None:
         upload_flag = query_for_upload()
@@ -287,19 +294,18 @@ def esgf_upload(starting_directory, build_list, upload_flag=False, prerelease_fl
         repo_handle = Repo(os.getcwd())
         latest_tag = get_latest_tag(repo_handle)
         print "latest_tag:", latest_tag
-        release_name = raw_input("Enter the title for this {} release: ".format(repo))
-        bump_version = raw_input("Would you like to bump the version number of {} [Y/n]".format(repo)) or "yes"
-        if bump_version.lower() in ["y", "yes"]:
-            new_tag = bump_tag_version(repo, latest_tag)
-            gh_release_create("ESGF/{}".format(repo), "{}".format(new_tag), publish=True, name=release_name, prerelease=prerelease_flag, dry_run=dryrun, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
+
+        if not name:
+            release_name = latest_tag
         else:
-            print "get releases:"
-            if latest_tag in get_releases("ESGF/{}".format(repo)):
-                print "Updating the assets for the latest tag {}".format(latest_tag)
-                gh_asset_upload("ESGF/{}".format(repo), latest_tag, "{}/{}/dist/*".format(starting_directory, repo), dry_run=dryrun, verbose=False)
-            else:
-                print "Creating release version {} for {}".format(latest_tag, repo)
-                gh_release_create("ESGF/{}".format(repo), "{}".format(latest_tag), publish=True, name=release_name, prerelease=prerelease_flag, dry_run=dryrun, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
+            release_name = name
+
+        if latest_tag in get_releases("ESGF/{}".format(repo)):
+            print "Updating the assets for the latest tag {}".format(latest_tag)
+            gh_asset_upload("ESGF/{}".format(repo), latest_tag, "{}/{}/dist/*".format(starting_directory, repo), dry_run=dryrun, verbose=False)
+        else:
+            print "Creating release version {} for {}".format(latest_tag, repo)
+            gh_release_create("ESGF/{}".format(repo), "{}".format(latest_tag), publish=True, name=release_name, prerelease=prerelease_flag, dry_run=dryrun, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
 
     print "Upload completed!"
 
@@ -404,15 +410,18 @@ def select_repos():
 
 @click.command()
 @click.option('--branch', '-b', default=None, type=click.Choice(['devel', 'master', 'latest']), help='Name of the git branch or tag to checkout and build')
+@click.option('--bump', '--bumpversion', default=None, type=click.Choice(['major', 'minor', 'patch']), help='Bump the version number according to the Semantic Versioning specification')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
+@click.option('--name', '-n', default=None, help="Name of the release")
 @click.option('--upload/--no-upload', is_flag=True, default=None, help="Upload built assets to GitHub")
 @click.option('--prerelease', '-p', is_flag=True, help="Tag release as prerelease")
 @click.option('--dryrun', '-r', is_flag=True, help="Perform a dry run of the release")
 @click.argument('repos', default=None, nargs=-1, type=click.Choice(['all', 'esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
-def main(branch, directory, repos, upload, prerelease, dryrun):
+def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
     """User prompted for build specifications and functions for build are called."""
     print "upload:", upload
     print "prerelease:", prerelease
+    print "bump:", bump
     if not branch:
         active_branch = choose_branch()
     else:
@@ -440,8 +449,8 @@ def main(branch, directory, repos, upload, prerelease, dryrun):
     print "build_list:", build_list
 
     update_all(active_branch, starting_directory, build_list)
-    build_all(build_list, starting_directory)
-    esgf_upload(starting_directory, build_list, upload, prerelease, dryrun)
+    build_all(build_list, starting_directory, bump)
+    esgf_upload(starting_directory, build_list, name, upload, prerelease, dryrun)
 
 
 if __name__ == '__main__':

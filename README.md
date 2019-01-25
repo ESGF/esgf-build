@@ -29,8 +29,16 @@ an conda environment file that can be used to create an ```esgf-build``` environ
     Enter the path to the directory containing repositories on the system.
   --branch branch_name
     Choose which branch/tag you will be building from. Valid options are 'devel', 'master', or 'latest'. 'latest' builds from the most recent tag.
-  --upload choice
-    Choose whether to upload built assets to GitHub. Valid options are 'y', 'yes', 'n' or 'no'
+  --bump version_component
+    Bump the version number according to the Semantic Versioning specification. Valid options are 'major', 'minor', or 'patch'. Leaves version unchanged if option is omitted.
+  --name release_name
+    Enter a name for the release.  The release will default to tag number as the name if this option is omitted.
+  --prerelease
+    Boolean flag for tagging the release a nonproduction. Defaults to False if omitted
+  --dryrun
+    Boolean flag for performing a dry run of the release. Defaults to False if omitted
+  --upload/--no-upload
+    Boolean flag to choose whether to upload built assets to GitHub.
 ```
  If any of the command line options are not passed to the script invocation, then the script will prompt for the user input.
 
