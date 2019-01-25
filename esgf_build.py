@@ -252,14 +252,29 @@ def bump_tag_version(repo, current_version):
 
 
 def query_for_upload():
-    pass
+    """Choose whether or not to upload assets to GitHubself.
+
+    Invokes when the upload command line option is not present.
+    """
+    while True:
+        upload_assets = raw_input("Would you like to upload the built assets to GitHub? [Y/n]") or "yes"
+        if upload_assets.lower() in ["y", "yes"]:
+            upload = True
+            break
+        elif upload_assets.lower() in ["n", "no"]:
+            upload = False
+            break
+        else:
+            print "Please choose a valid option"
+    return upload
 
 
 def esgf_upload(starting_directory, build_list, upload_flag=False, prerelease_flag=False, dryrun=False):
     """Upload binaries to GitHub release as assets."""
     if upload_flag is None:
-        query_for_upload()
-    elif not upload_flag:
+        upload_flag = query_for_upload()
+
+    if not upload_flag:
         return
 
     if prerelease_flag:
