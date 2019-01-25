@@ -19,6 +19,9 @@ logger = logging.basicConfig(level=logging.DEBUG,
 logger = logging.getLogger("esgf_build")
 
 
+###########################################
+# Git Utility Functions
+
 class ProgressPrinter(RemoteProgress):
     """Print the progress of cloning from GitHub on the command line."""
 
@@ -130,6 +133,16 @@ def update_all(active_branch, repo_directory, build_list):
     print "Directory updates complete."
 
 
+def get_most_recent_commit(repo_handle):
+    """Get the most recent commit w/ log and list comprehension."""
+    repo_handle.git.log()
+    mst_rcnt_cmmt = repo_handle.git.log().split("\ncommit")[0]
+    return mst_rcnt_cmmt
+
+###########################################
+# Ant Utility Functions
+
+
 def clean(repo, log_directory, clean_command="clean_all"):
     """Run the clean directive from a repo's build script."""
     clean_log = os.path.join(log_directory, repo + "-clean.log")
@@ -237,6 +250,7 @@ def bump_tag_version(repo, current_version):
         else:
             print "Invalid selection. Please make a valid selection."
 
+
 def query_for_upload():
     pass
 
@@ -318,12 +332,6 @@ def find_path_to_repos(starting_directory):
         starting_directory = os.path.realpath(starting_directory)
         return True
 
-
-def get_most_recent_commit(repo_handle):
-    """Get the most recent commit w/ log and list comprehension."""
-    repo_handle.git.log()
-    mst_rcnt_cmmt = repo_handle.git.log().split("\ncommit")[0]
-    return mst_rcnt_cmmt
 
 
 def choose_branch():
