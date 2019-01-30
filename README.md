@@ -9,6 +9,7 @@ The build process typically works as follows: checkout a branch/tag from GitHub 
 1. Path to directory with repositories
 2. Dependencies installed:
     * Python 2.7
+    * Oracle Java 8
     * Apache Ant
 3. A .netrc file with a GitHub access token entry.  ESGF-Build uses the githubrelease python module under the hood and it uses token-based authentication.  See [Configuring githubrelease](https://github.com/j0057/github-release#configuring)
 
