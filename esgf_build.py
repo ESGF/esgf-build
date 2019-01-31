@@ -36,6 +36,8 @@ def get_latest_tag(repo):
     Provides all the tags, reverses them (so that you can get the latest
     tag) and then takes only the first from the list.
     """
+    # Fetch latest tags from GitHub
+    build_utilities.call_binary("git", ["fetch", "--tags"])
     # A tag can point to a blob and the loop prunes blob tags from the list of tags to be sorted
     tag_list = []
     for bar in repo.tags:
@@ -102,7 +104,11 @@ def clone_repo(repo, repo_directory):
     print(repo + " successfully cloned -> {repo_path}".format(repo_path=repo_path))
 
 
-def update_all(active_branch, repo_directory, build_list):
+def list_branches(repo_handle):
+    """List all branches for a repo."""
+    return [repo.name for repo in repo_handle.branches]
+
+def update_all(branch, repo_directory, build_list):
     """Check each repo in the REPO_LIST for the most updated branch, and uses taglist to track versions."""
     print "Beginning to update directories."
 
@@ -119,6 +125,18 @@ def update_all(active_branch, repo_directory, build_list):
             os.chdir(repo_directory + "/" + repo)
 
         repo_handle = Repo(os.getcwd())
+
+        if not branch:
+            active_branch = choose_branch(repo_handle)
+        elif branch not in list_branches(repo_handle):
+            raise ValueError("{} branch was not found for {} repo".format(branch, repo))
+        else:
+            active_branch = branch
+
+        print "Building {}".format(active_branch)
+        repo_branches = list_branches(repo_handle)
+        print "repo_branches:", repo_branches
+        import sys; sys.exit(0)
         update_repo(repo, repo_handle, active_branch)
 
         latest_tag = get_latest_tag(repo_handle)
@@ -355,13 +373,16 @@ def find_path_to_repos(starting_directory):
 
 
 
-def choose_branch():
+def choose_branch(repo_handle):
     """Choose a git branch or tag name to checkout and build."""
+    branches = list_branches(repo_handle)
     while True:
-        active_branch = raw_input("Enter a branch name or tag name to checkout for the build. Valid options are 'devel' for the devel branch, 'master' for the master branch, or 'latest' for the latest tag: ")
+        print "Available branches: ", branches
+        active_branch = raw_input("Enter a branch name to checkout for the build. You can also enter 'latest' to build from the latest tag: ")
 
-        if active_branch.lower() not in ["devel", "master", "latest"]:
-            print "Please choose either master, devel, or latest."
+        if active_branch.lower() not in branches and active_branch.lower() not in ["latest"]:
+            print "{} is not a valid branch.".format(active_branch)
+            print "Please choose either a valid branch from the list or 'latest' for the most recent tag."
             continue
         else:
             break
@@ -409,7 +430,7 @@ def select_repos():
 
 
 @click.command()
-@click.option('--branch', '-b', default=None, type=click.Choice(['devel', 'master', 'latest']), help='Name of the git branch or tag to checkout and build')
+@click.option('--branch', '-b', default=None, help='Name of the git branch or tag to checkout and build')
 @click.option('--bump', '--bumpversion', default=None, type=click.Choice(['major', 'minor', 'patch']), help='Bump the version number according to the Semantic Versioning specification')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
 @click.option('--name', '-n', default=None, help="Name of the release")
@@ -422,12 +443,6 @@ def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
     print "upload:", upload
     print "prerelease:", prerelease
     print "bump:", bump
-    if not branch:
-        active_branch = choose_branch()
-    else:
-        active_branch = branch
-
-    print "Building {}".format(active_branch)
 
     if not directory:
         starting_directory = choose_directory()
@@ -448,7 +463,8 @@ def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
 
     print "build_list:", build_list
 
-    update_all(active_branch, starting_directory, build_list)
+
+    update_all(branch, starting_directory, build_list)
     build_all(build_list, starting_directory, bump)
     esgf_upload(starting_directory, build_list, name, upload, prerelease, dryrun)
 

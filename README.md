@@ -28,7 +28,7 @@ an conda environment file that can be used to create an ```esgf-build``` environ
   --directory /path/to/repos
     Enter the path to the directory containing repositories on the system.
   --branch branch_name
-    Choose which branch/tag you will be building from. Valid options are 'devel', 'master', or 'latest'. 'latest' builds from the most recent tag.
+    Choose which branch/tag you will be building from. Valid options are any branch name for a repo or 'latest'. 'latest' builds from the most recent tag.
   --bump version_component
     Bump the version number according to the Semantic Versioning specification. Valid options are 'major', 'minor', or 'patch'. Leaves version unchanged if option is omitted.
   --name release_name
