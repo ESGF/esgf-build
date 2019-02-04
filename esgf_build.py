@@ -10,7 +10,7 @@ import repo_info
 import build_utilities
 import semver
 import click
-from github_release import gh_release_create, gh_asset_upload, get_releases
+from github_release import gh_release_create, gh_asset_upload, get_releases, gh_release_delete
 from git import RemoteProgress
 from plumbum.commands import ProcessExecutionError
 
@@ -276,6 +276,16 @@ def query_for_upload():
     return upload
 
 
+def remove_old_assets(repo, tag_name):
+    """Delete old assets from existing release during an update.
+
+    The GitHub Releases module being used does not support updating assets on a release.  So the assets must
+    first be deleted and then replaced with the new assets.
+    """
+    print "Removing previously uploaded assets"
+    gh_release_delete(repo, tag_name)
+
+
 def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerelease_flag=False, dryrun=False):
     """Upload binaries to GitHub release as assets."""
     if upload_flag is None:
@@ -294,19 +304,22 @@ def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerele
         repo_handle = Repo(os.getcwd())
         latest_tag = get_latest_tag(repo_handle)
         print "latest_tag:", latest_tag
+        published_releases = [str(release["name"]) for release in get_releases("ESGF/{}".format(repo))]
+        print "published_releases: ", published_releases
 
         if not name:
             release_name = latest_tag
         else:
             release_name = name
 
-        if latest_tag in get_releases("ESGF/{}".format(repo)):
+        if latest_tag in published_releases:
             print "Updating the assets for the latest tag {}".format(latest_tag)
-            gh_asset_upload("ESGF/{}".format(repo), latest_tag, "{}/{}/dist/*".format(starting_directory, repo), dry_run=dryrun, verbose=False)
+            remove_old_assets("ESGF/{}".format(repo), latest_tag)
+            gh_release_create("ESGF/{}".format(repo), latest_tag, publish=True, name=release_name, prerelease=prerelease_flag, dry_run=dryrun, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
+            # gh_asset_upload("ESGF/{}".format(repo), latest_tag, "{}/{}/dist/*".format(starting_directory, repo), dry_run=dryrun, verbose=False)
         else:
             print "Creating release version {} for {}".format(latest_tag, repo)
             gh_release_create("ESGF/{}".format(repo), "{}".format(latest_tag), publish=True, name=release_name, prerelease=prerelease_flag, dry_run=dryrun, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
-
     print "Upload completed!"
 
 
@@ -352,7 +365,6 @@ def find_path_to_repos(starting_directory):
         os.makedirs(starting_directory)
         starting_directory = os.path.realpath(starting_directory)
         return True
-
 
 
 def choose_branch():
