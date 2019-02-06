@@ -429,6 +429,18 @@ def select_repos():
     return build_list
 
 
+def check_java_compiler():
+    """Check if a suitable Java compiler is found.
+
+    The ESGF webapps currently support being built with Java 8 (JRE class number 52).
+    An exception will be raised if an incompatible Java compiler is found.
+    """
+    javac = build_utilities.call_binary("javac", ["-version"], stderr_output=True)
+    javac = javac.split(" ")[1]
+    if not javac.startswith("1.8.0"):
+        raise EnvironmentError("Your Java compiler must be a Java 8 compiler (JRE class number 52). Java compiler version {} was found using javac -version".format(javac))
+
+
 @click.command()
 @click.option('--branch', '-b', default=None, help='Name of the git branch or tag to checkout and build')
 @click.option('--bump', '--bumpversion', default=None, type=click.Choice(['major', 'minor', 'patch']), help='Bump the version number according to the Semantic Versioning specification')
@@ -444,6 +456,8 @@ def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
     print "prerelease:", prerelease
     print "bump:", bump
 
+    check_java_compiler()
+    
     if not directory:
         starting_directory = choose_directory()
     else:
