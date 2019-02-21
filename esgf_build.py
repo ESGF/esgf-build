@@ -108,6 +108,7 @@ def list_branches(repo_handle):
     """List all branches for a repo."""
     return [repo.name for repo in repo_handle.branches]
 
+
 def update_all(branch, repo_directory, build_list):
     """Check each repo in the REPO_LIST for the most updated branch, and uses taglist to track versions."""
     print "Beginning to update directories."
@@ -128,15 +129,14 @@ def update_all(branch, repo_directory, build_list):
 
         if not branch:
             active_branch = choose_branch(repo_handle)
+        elif branch == "latest":
+            active_branch = "latest"
         elif branch not in list_branches(repo_handle):
             raise ValueError("{} branch was not found for {} repo".format(branch, repo))
         else:
             active_branch = branch
 
         print "Building {}".format(active_branch)
-        repo_branches = list_branches(repo_handle)
-        print "repo_branches:", repo_branches
-        import sys; sys.exit(0)
         update_repo(repo, repo_handle, active_branch)
 
         latest_tag = get_latest_tag(repo_handle)
@@ -277,7 +277,7 @@ def bump_tag_version(repo, current_version, selection=None):
 
 
 def query_for_upload():
-    """Choose whether or not to upload assets to GitHubself.
+    """Choose whether or not to upload assets to GitHub.
 
     Invokes when the upload command line option is not present.
     """
@@ -372,7 +372,6 @@ def find_path_to_repos(starting_directory):
         return True
 
 
-
 def choose_branch(repo_handle):
     """Choose a git branch or tag name to checkout and build."""
     branches = list_branches(repo_handle)
@@ -457,7 +456,7 @@ def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
     print "bump:", bump
 
     check_java_compiler()
-    
+
     if not directory:
         starting_directory = choose_directory()
     else:
@@ -476,7 +475,6 @@ def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
         build_list = select_repos()
 
     print "build_list:", build_list
-
 
     update_all(branch, starting_directory, build_list)
     build_all(build_list, starting_directory, bump)
