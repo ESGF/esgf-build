@@ -37,7 +37,7 @@ def get_latest_tag(repo):
     tag) and then takes only the first from the list.
     """
     # Fetch latest tags from GitHub
-    build_utilities.call_binary("git", ["fetch", "--tags", "--prune"])
+    build_utilities.call_binary("git", ["fetch", "--prune", "origin", '"+refs/tags/*:refs/tags/*"'])
     # A tag can point to a blob and the loop prunes blob tags from the list of tags to be sorted
     tag_list = []
     for bar in repo.tags:
@@ -101,8 +101,8 @@ def update_repo(repo_name, repo_object, active_branch, bump):
     if bump:
         new_tag = bump_tag_version(repo_name, latest_tag, bump)
         latest_commit = repo_object.commit(active_branch)
-        repo_object.create_tag(new_tag, ref=latest_commit, message='Updated {} version to tag "{}"'.format(bump, new_tag))
-        build_utilities.call_binary("git", ["push", "--tags"])
+        new_tag_object = repo_object.create_tag(new_tag, ref=latest_commit, message='Updated {} version to tag "{}"'.format(bump, new_tag))
+        repo_object.remotes.origin.push(new_tag_object)
 
 
 def clone_repo(repo, repo_directory):
