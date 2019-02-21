@@ -37,7 +37,7 @@ def get_latest_tag(repo):
     tag) and then takes only the first from the list.
     """
     # Fetch latest tags from GitHub
-    build_utilities.call_binary("git", ["fetch", "--tags"])
+    build_utilities.call_binary("git", ["fetch", "--tags", "--prune"])
     # A tag can point to a blob and the loop prunes blob tags from the list of tags to be sorted
     tag_list = []
     for bar in repo.tags:
@@ -49,6 +49,7 @@ def get_latest_tag(repo):
             tag_list.append(bar)
     sorted_tags = sorted(tag_list, key=lambda t: t.commit.committed_datetime)
     latest_tag = str(sorted_tags[-1])
+    print "latest tag found:", latest_tag
     return latest_tag
 
 
@@ -75,7 +76,7 @@ def create_commits_since_last_tag_file(commits_since_last_tag_file, repo_name, l
         commits_since_last_tag_file.write(commits_since_tag + "\n")
 
 
-def update_repo(repo_name, repo_object, active_branch):
+def update_repo(repo_name, repo_object, active_branch, bump):
     """Accept a GitPython Repo object and updates the specified branch."""
     if active_branch == "latest":
         active_tag = get_latest_tag(repo_object)
@@ -90,9 +91,18 @@ def update_repo(repo_name, repo_object, active_branch):
         repo_object.git.checkout(active_branch)
 
         progress_printer = ProgressPrinter()
+        print "Pulling latest updates for {repo_name}'s {active_branch} branch from GitHub".format(repo_name=repo_name, active_branch=active_branch)
         repo_object.remotes.origin.pull("{active_branch}:{active_branch}".format(
             active_branch=active_branch), progress=progress_printer)
     print "Updating: " + repo_name
+
+    latest_tag = get_latest_tag(repo_object)
+
+    if bump:
+        new_tag = bump_tag_version(repo_name, latest_tag, bump)
+        latest_commit = repo_object.commit(active_branch)
+        repo_object.create_tag(new_tag, ref=latest_commit, message='Updated {} version to tag "{}"'.format(bump, new_tag))
+        build_utilities.call_binary("git", ["push", "--tags"])
 
 
 def clone_repo(repo, repo_directory):
@@ -113,7 +123,7 @@ def list_branches(repo_handle):
     return all_branches
 
 
-def update_all(branch, repo_directory, build_list):
+def update_all(branch, repo_directory, build_list, bump):
     """Check each repo in the REPO_LIST for the most updated branch, and uses taglist to track versions."""
     print "Beginning to update directories."
 
@@ -140,13 +150,12 @@ def update_all(branch, repo_directory, build_list):
         else:
             active_branch = branch
 
-        print "Building {}".format(active_branch)
-        update_repo(repo, repo_handle, active_branch)
+        print "Updating {}".format(active_branch)
+        update_repo(repo, repo_handle, active_branch, bump)
 
-        latest_tag = get_latest_tag(repo_handle)
-        create_taglist_file(taglist_file, repo, latest_tag)
-
-        create_commits_since_last_tag_file(commits_since_last_tag_file, repo, latest_tag)
+        # create_taglist_file(taglist_file, repo, latest_tag)
+        #
+        # create_commits_since_last_tag_file(commits_since_last_tag_file, repo, latest_tag)
 
         os.chdir("..")
 
@@ -198,7 +207,7 @@ def publish_local(repo, log_directory, publish_command="publish_local"):
         publish_local_log_file.write(publish_local_output)
 
 
-def build_all(build_list, starting_directory, bump):
+def build_all(build_list, starting_directory):
     """Take a list of repositories to build, and uses ant to build them."""
     log_directory = starting_directory + "/buildlogs"
     if not os.path.exists(log_directory):
@@ -207,11 +216,6 @@ def build_all(build_list, starting_directory, bump):
         print "Building repo: " + repo
         os.chdir(starting_directory + "/" + repo)
         logger.info(os.getcwd())
-        if bump:
-            repo_handle = Repo(os.getcwd())
-            latest_tag = get_latest_tag(repo_handle)
-            new_tag = bump_tag_version(repo, latest_tag, bump)
-            repo_handle.create_tag(new_tag, message='Updated {} version to tag "{}"'.format(bump, new_tag))
 
         # repos getcert and stats-api do not need an ant pull call
         if repo == 'esgf-getcert':
@@ -314,6 +318,7 @@ def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerele
         print "repo:", repo
         os.chdir(os.path.join(starting_directory, repo))
         repo_handle = Repo(os.getcwd())
+        print "active branch before upload:", repo_handle.active_branch
         latest_tag = get_latest_tag(repo_handle)
         print "latest_tag:", latest_tag
 
@@ -480,8 +485,8 @@ def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
 
     print "build_list:", build_list
 
-    update_all(branch, starting_directory, build_list)
-    build_all(build_list, starting_directory, bump)
+    update_all(branch, starting_directory, build_list, bump)
+    build_all(build_list, starting_directory)
     esgf_upload(starting_directory, build_list, name, upload, prerelease, dryrun)
 
 
