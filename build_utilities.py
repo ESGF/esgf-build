@@ -12,7 +12,7 @@ from plumbum.commands import ProcessExecutionError
 logger = logging.getLogger(__name__)
 
 
-def call_binary(binary_name, arguments=None, silent=False, conda_env=None):
+def call_binary(binary_name, arguments=None, silent=False, conda_env=None, stderr_output=None):
     """Use plumbum to make a call to a CLI binary.  The arguments should be passed as a list of strings."""
     RETURN_CODE = 0
     STDOUT = 1
@@ -48,7 +48,7 @@ def call_binary(binary_name, arguments=None, silent=False, conda_env=None):
             output = command.run_tee()
 
     # special case where checking java version is displayed via stderr
-    if command.__str__() == '/usr/local/java/bin/java' and output[RETURN_CODE] == 0:
+    if command.__str__() == '/usr/local/java/bin/java' and output[RETURN_CODE] == 0 or stderr_output:
         return output[STDERR]
 
     # Check for non-zero return code
