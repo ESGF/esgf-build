@@ -30,14 +30,21 @@ class ProgressPrinter(RemoteProgress):
         print op_code, cur_count, max_count, cur_count / (max_count or 100.0), message or "NO MESSAGE"
 
 
-def get_latest_tag(repo):
-    """Accept a GitPython Repo object and returns the latest annotated tag.
+def list_remote_tags():
+    """Return a list of the tags on the remote repo."""
+    # git ls-remote --tags --sort="v:refname" | sed 's/.*\///; s/\^{}//'
+    from plumbum import local
+    sed = local['sed']
+    git = local['git']
 
-    Provides all the tags, reverses them (so that you can get the latest
-    tag) and then takes only the first from the list.
-    """
-    # Fetch latest tags from GitHub
-    build_utilities.call_binary("git", ["fetch", "--prune", "origin", '"+refs/tags/*:refs/tags/*"'])
+    chain = git["ls-remote", "--tags", "--sort=-v:refname", "origin"] | sed["s/.*\///; s/\^{}//"]
+    remote_tags = chain()
+    remote_tags = [str(version) for version in remote_tags.split("\n")]
+    return remote_tags
+
+
+def list_local_tags(repo):
+    """Return a list of the tags on the local repo."""
     # A tag can point to a blob and the loop prunes blob tags from the list of tags to be sorted
     tag_list = []
     for bar in repo.tags:
@@ -47,7 +54,38 @@ def get_latest_tag(repo):
             pass
         else:
             tag_list.append(bar)
-    sorted_tags = sorted(tag_list, key=lambda t: t.commit.committed_datetime)
+    local_tags = [str(tag) for tag in sorted(tag_list, key=lambda t: t.commit.committed_datetime)]
+    return local_tags
+
+
+def update_tags(repo, synctag):
+    """Update tags on the repo."""
+    if synctag:
+        # Fetch latest tags from GitHub
+        build_utilities.call_binary("git", ["fetch", "--prune", "--prune-tags", "origin"])
+        return
+    else:
+        build_utilities.call_binary("git", ["fetch", "--tags"])
+        remote_tags = set(list_remote_tags())
+        local_tags = set(list_local_tags(repo))
+
+        local_only_tags = local_tags.difference(remote_tags)
+
+        if local_only_tags:
+            print "The following tags only exist locally and are not in sync with remote: {}".format(", ".join(local_only_tags))
+            delete_local_tags = raw_input("Would you like to delete them? [Y/n]: ") or "yes"
+            if delete_local_tags.lower() in ["y", "yes"]:
+                for tag in local_only_tags:
+                    build_utilities.call_binary("git", ["tag", "-d", tag])
+
+
+def get_latest_tag(repo):
+    """Accept a GitPython Repo object and returns the latest annotated tag.
+
+    Provides all the tags, reverses them (so that you can get the latest
+    tag) and then takes only the first from the list.
+    """
+    sorted_tags = list_local_tags(repo)
     latest_tag = str(sorted_tags[-1])
     print "latest tag found:", latest_tag
     return latest_tag
@@ -76,8 +114,10 @@ def create_commits_since_last_tag_file(commits_since_last_tag_file, repo_name, l
         commits_since_last_tag_file.write(commits_since_tag + "\n")
 
 
-def update_repo(repo_name, repo_object, active_branch, bump):
+def update_repo(repo_name, repo_object, active_branch, bump, synctag):
     """Accept a GitPython Repo object and updates the specified branch."""
+    update_tags(repo_object, synctag)
+
     if active_branch == "latest":
         active_tag = get_latest_tag(repo_object)
         print "Checkout {repo_name}'s {active_tag} tag".format(repo_name=repo_name, active_tag=active_tag)
@@ -123,7 +163,7 @@ def list_branches(repo_handle):
     return all_branches
 
 
-def update_all(branch, repo_directory, build_list, bump):
+def update_all(branch, repo_directory, build_list, bump, synctag):
     """Check each repo in the REPO_LIST for the most updated branch, and uses taglist to track versions."""
     print "Beginning to update directories."
 
@@ -151,7 +191,7 @@ def update_all(branch, repo_directory, build_list, bump):
             active_branch = branch
 
         print "Updating {}".format(active_branch)
-        update_repo(repo, repo_handle, active_branch, bump)
+        update_repo(repo, repo_handle, active_branch, bump, synctag)
 
         # create_taglist_file(taglist_file, repo, latest_tag)
         #
@@ -451,6 +491,7 @@ def check_java_compiler():
 
 @click.command()
 @click.option('--branch', '-b', default=None, help='Name of the git branch or tag to checkout and build')
+@click.option('--synctag', '-s', is_flag=True, help='Sync local and remote tags by pruning any tags out of sync on local')
 @click.option('--bump', '--bumpversion', default=None, type=click.Choice(['major', 'minor', 'patch']), help='Bump the version number according to the Semantic Versioning specification')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
 @click.option('--name', '-n', default=None, help="Name of the release")
@@ -458,7 +499,7 @@ def check_java_compiler():
 @click.option('--prerelease', '-p', is_flag=True, help="Tag release as prerelease")
 @click.option('--dryrun', '-r', is_flag=True, help="Perform a dry run of the release")
 @click.argument('repos', default=None, nargs=-1, type=click.Choice(['all', 'esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
-def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
+def main(branch, directory, repos, upload, prerelease, dryrun, name, bump, synctag):
     """User prompted for build specifications and functions for build are called."""
     print "upload:", upload
     print "prerelease:", prerelease
@@ -485,7 +526,7 @@ def main(branch, directory, repos, upload, prerelease, dryrun, name, bump):
 
     print "build_list:", build_list
 
-    update_all(branch, starting_directory, build_list, bump)
+    update_all(branch, starting_directory, build_list, bump, synctag)
     build_all(build_list, starting_directory)
     esgf_upload(starting_directory, build_list, name, upload, prerelease, dryrun)
 

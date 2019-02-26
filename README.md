@@ -37,6 +37,8 @@ an conda environment file that can be used to create an ```esgf-build``` environ
     Boolean flag for tagging the release a nonproduction. Defaults to False if omitted
   --dryrun
     Boolean flag for performing a dry run of the release. Defaults to False if omitted
+  --synctag
+    Boolean flag for performing deleting local tags that are not in sync with the remote repo. Defaults to False if omitted
   --upload/--no-upload
     Boolean flag to choose whether to upload built assets to GitHub.
 ```
