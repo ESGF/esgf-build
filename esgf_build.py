@@ -13,6 +13,9 @@ import click
 from github_release import gh_release_create, gh_asset_upload, get_releases
 from git import RemoteProgress
 from plumbum.commands import ProcessExecutionError
+from plumbum import local
+import re
+from distutils.version import LooseVersion
 
 logger = logging.basicConfig(level=logging.DEBUG,
                              format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -32,14 +35,13 @@ class ProgressPrinter(RemoteProgress):
 
 def list_remote_tags():
     """Return a list of the tags on the remote repo."""
-    # git ls-remote --tags --sort="v:refname" | sed 's/.*\///; s/\^{}//'
-    from plumbum import local
-    sed = local['sed']
     git = local['git']
 
-    chain = git["ls-remote", "--tags", "--sort=-v:refname", "origin"] | sed["s/.*\///; s/\^{}//"]
-    remote_tags = chain()
-    remote_tags = [str(version) for version in remote_tags.split("\n")]
+    tags = git["ls-remote", "--tags", "origin"]()
+    tags = str(tags)
+    remote_tags = [re.sub(r"^\W+|\W+$", '', x.rsplit("/")[-1]) for x in tags.split("\n") if x]
+    remote_tags = sorted(remote_tags, key=LooseVersion, reverse=True)
+    print "remote_tags:", remote_tags
     return remote_tags
 
 
