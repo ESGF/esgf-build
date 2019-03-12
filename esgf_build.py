@@ -10,7 +10,7 @@ import repo_info
 import build_utilities
 import semver
 import click
-from github_release import gh_release_create, gh_asset_upload, get_releases
+from github_release import gh_release_create, gh_asset_upload, get_releases, gh_release_edit
 from git import RemoteProgress
 from plumbum.commands import ProcessExecutionError
 from plumbum import local
@@ -344,6 +344,13 @@ def query_for_upload():
     return upload
 
 
+def get_published_releases(repo_name):
+    """Return the versions of the releases that have been published to GitHub."""
+    published_releases = [release["name"] for release in get_releases(repo_name)]
+    print "published_releases:", published_releases
+    return published_releases
+
+
 def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerelease_flag=False, dryrun=False):
     """Upload binaries to GitHub release as assets."""
     if upload_flag is None:
@@ -369,7 +376,11 @@ def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerele
         else:
             release_name = name
 
-        if latest_tag in get_releases("ESGF/{}".format(repo)):
+        published_releases = get_published_releases("ESGF/{}".format(repo))
+        if latest_tag in published_releases:
+            if not prerelease_flag:
+                print "removing prerelease label"
+                gh_release_edit("ESGF/{}".format(repo), latest_tag, prerelease=False)
             print "Updating the assets for the latest tag {}".format(latest_tag)
             gh_asset_upload("ESGF/{}".format(repo), latest_tag, "{}/{}/dist/*".format(starting_directory, repo), dry_run=dryrun, verbose=False)
         else:
