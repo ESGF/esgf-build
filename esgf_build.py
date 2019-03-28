@@ -3,6 +3,7 @@
 import subprocess
 import shlex
 import os
+import sys
 import logging
 import datetime
 from git import Repo
@@ -40,8 +41,7 @@ def list_remote_tags():
     tags = git["ls-remote", "--tags", "origin"]()
     tags = str(tags)
     remote_tags = [re.sub(r"^\W+|\W+$", '', x.rsplit("/")[-1]) for x in tags.split("\n") if x]
-    remote_tags = sorted(remote_tags, key=LooseVersion, reverse=True)
-    print "remote_tags:", remote_tags
+    remote_tags = sorted(set(remote_tags), key=LooseVersion, reverse=True)
     return remote_tags
 
 
@@ -116,35 +116,39 @@ def create_commits_since_last_tag_file(commits_since_last_tag_file, repo_name, l
         commits_since_last_tag_file.write(commits_since_tag + "\n")
 
 
-def update_repo(repo_name, repo_object, active_branch, bump, synctag):
+def update_repo(repo_name, repo_object, bump, synctag):
     """Accept a GitPython Repo object and updates the specified branch."""
     update_tags(repo_object, synctag)
 
-    if active_branch == "latest":
-        active_tag = get_latest_tag(repo_object)
-        print "Checkout {repo_name}'s {active_tag} tag".format(repo_name=repo_name, active_tag=active_tag)
-        try:
-            build_utilities.call_binary("git", ["checkout", active_tag, "-b", active_tag])
-        except ProcessExecutionError, err:
-            if err.retcode == 128:
-                pass
-    else:
-        print "Checkout {repo_name}'s {active_branch} branch".format(repo_name=repo_name, active_branch=active_branch)
-        repo_object.git.checkout(active_branch)
+    progress_printer = ProgressPrinter()
+    print "Pulling latest updates for {repo_name} from GitHub".format(repo_name=repo_name)
+    repo_object.remotes.origin.fetch(progress=progress_printer)
 
-        progress_printer = ProgressPrinter()
-        print "Pulling latest updates for {repo_name}'s {active_branch} branch from GitHub".format(repo_name=repo_name, active_branch=active_branch)
-        repo_object.remotes.origin.pull("{active_branch}:{active_branch}".format(
-            active_branch=active_branch), progress=progress_printer)
-    print "Updating: " + repo_name
+    # if active_branch == "latest":
+    #     active_tag = get_latest_tag(repo_object)
+    #     print "Checkout {repo_name}'s {active_tag} tag".format(repo_name=repo_name, active_tag=active_tag)
+    #     try:
+    #         build_utilities.call_binary("git", ["checkout", active_tag, "-b", active_tag])
+    #     except ProcessExecutionError, err:
+    #         if err.retcode == 128:
+    #             pass
+    # else:
+    #     print "Checkout {repo_name}'s {active_branch} branch".format(repo_name=repo_name, active_branch=active_branch)
+    #     repo_object.git.checkout(active_branch)
+    #
+    #     progress_printer = ProgressPrinter()
+    #     print "Pulling latest updates for {repo_name}'s {active_branch} branch from GitHub".format(repo_name=repo_name, active_branch=active_branch)
+    #     repo_object.remotes.origin.pull("{active_branch}:{active_branch}".format(
+    #         active_branch=active_branch), progress=progress_printer)
+    # print "Updating: " + repo_name
 
-    latest_tag = get_latest_tag(repo_object)
+    # latest_tag = get_latest_tag(repo_object)
 
-    if bump:
-        new_tag = bump_tag_version(repo_name, latest_tag, bump)
-        latest_commit = repo_object.commit(active_branch)
-        new_tag_object = repo_object.create_tag(new_tag, ref=latest_commit, message='Updated {} version to tag "{}"'.format(bump, new_tag))
-        repo_object.remotes.origin.push(new_tag_object)
+    # if bump:
+    #     new_tag = bump_tag_version(repo_name, latest_tag, bump)
+    #     latest_commit = repo_object.commit(active_branch)
+    #     new_tag_object = repo_object.create_tag(new_tag, ref=latest_commit, message='Updated {} version to tag "{}"'.format(bump, new_tag))
+    #     repo_object.remotes.origin.push(new_tag_object)
 
 
 def clone_repo(repo, repo_directory):
@@ -165,7 +169,7 @@ def list_branches(repo_handle):
     return all_branches
 
 
-def update_all(branch, repo_directory, build_list, bump, synctag):
+def update_all(repo_directory, repo, bump, synctag):
     """Check each repo in the REPO_LIST for the most updated branch, and uses taglist to track versions."""
     print "Beginning to update directories."
 
@@ -173,33 +177,32 @@ def update_all(branch, repo_directory, build_list, bump, synctag):
         repo_directory, "commits_since_last_tag.txt"), "w")
     taglist_file = open(os.path.join(repo_directory, "taglist.txt"), "w+")
 
-    for repo in build_list:
-        try:
-            os.chdir(repo_directory + "/" + repo)
-        except OSError:
-            print "Directory for {repo} does not exist".format(repo=repo)
-            clone_repo(repo, repo_directory)
-            os.chdir(repo_directory + "/" + repo)
+    try:
+        os.chdir(repo_directory + "/" + repo)
+    except OSError:
+        print "Directory for {repo} does not exist".format(repo=repo)
+        clone_repo(repo, repo_directory)
+        os.chdir(repo_directory + "/" + repo)
 
-        repo_handle = Repo(os.getcwd())
+    repo_handle = Repo(os.getcwd())
 
-        if not branch:
-            active_branch = choose_branch(repo_handle)
-        elif branch == "latest":
-            active_branch = "latest"
-        elif branch not in list_branches(repo_handle):
-            raise ValueError("{} branch was not found for {} repo".format(branch, repo))
-        else:
-            active_branch = branch
+    # if not branch:
+    #     active_branch = choose_branch(repo_handle)
+    # elif branch == "latest":
+    #     active_branch = "latest"
+    # elif branch not in list_branches(repo_handle):
+    #     raise ValueError("{} branch was not found for {} repo".format(branch, repo))
+    # else:
+    #     active_branch = branch
 
-        print "Updating {}".format(active_branch)
-        update_repo(repo, repo_handle, active_branch, bump, synctag)
+    print "Updating {}".format(repo)
+    update_repo(repo, repo_handle, bump, synctag)
 
-        # create_taglist_file(taglist_file, repo, latest_tag)
-        #
-        # create_commits_since_last_tag_file(commits_since_last_tag_file, repo, latest_tag)
+    # create_taglist_file(taglist_file, repo, latest_tag)
+    #
+    # create_commits_since_last_tag_file(commits_since_last_tag_file, repo, latest_tag)
 
-        os.chdir("..")
+    os.chdir("..")
 
     taglist_file.close()
     commits_since_last_tag_file.close()
@@ -249,40 +252,55 @@ def publish_local(repo, log_directory, publish_command="publish_local"):
         publish_local_log_file.write(publish_local_output)
 
 
-def build_all(build_list, starting_directory):
+def build_all(build_source, repo, starting_directory):
     """Take a list of repositories to build, and uses ant to build them."""
     log_directory = starting_directory + "/buildlogs"
     if not os.path.exists(log_directory):
         os.makedirs(log_directory)
-    for repo in build_list:
-        print "Building repo: " + repo
-        os.chdir(starting_directory + "/" + repo)
-        logger.info(os.getcwd())
 
-        # repos getcert and stats-api do not need an ant pull call
-        if repo == 'esgf-getcert':
-            # clean and dist only
-            clean(repo, log_directory, clean_command="clean")
-            build(repo, log_directory, build_command="dist")
-            os.chdir("..")
-            continue
+    print "Building repo: " + repo
+    os.chdir(starting_directory + "/" + repo)
+    logger.info(os.getcwd())
+    if build_source[0] == "tag":
+        print "Building from tag {}".format(build_source[1])
+        try:
+            build_utilities.call_binary("git", ["checkout", "tags/{}".format(build_source[1]), "-b", build_source[1]])
+        except ProcessExecutionError, error:
+            print "error:", error
 
-        elif repo == 'esgf-stats-api':
-            # clean and make_dist only
-            clean(repo, log_directory)
-            build(repo, log_directory)
-            os.chdir('..')
-            continue
-        else:
-            # clean, build, and make_dist, publish to local repo
-            clean(repo, log_directory)
-            pull(repo, log_directory)
-            build(repo, log_directory)
-            publish_local(repo, log_directory)
+        print "sanity check:", build_utilities.call_binary("git", ["describe"])
+    elif build_source[0] == "branch":
+        print "Building from branch {}".format(build_source[1])
+        build_utilities.call_binary("git", ["checkout", build_source[1]])
+        build_utilities.call_binary("git", ["pull"])
+        print "sanity check branch:", build_utilities.call_binary("git", ["rev-parse", "--abbrev-ref", "HEAD"])
+
+
+
+    # repos getcert and stats-api do not need an ant pull call
+    if repo == 'esgf-getcert':
+        # clean and dist only
+        clean(repo, log_directory, clean_command="clean")
+        build(repo, log_directory, build_command="dist")
         os.chdir("..")
+        # continue
+
+    elif repo == 'esgf-stats-api':
+        # clean and make_dist only
+        clean(repo, log_directory)
+        build(repo, log_directory)
+        os.chdir('..')
+        # continue
+    else:
+        # clean, build, and make_dist, publish to local repo
+        clean(repo, log_directory)
+        pull(repo, log_directory)
+        build(repo, log_directory)
+        publish_local(repo, log_directory)
+    os.chdir("..")
 
     print "\nRepository builds complete."
-    create_build_history(build_list)
+    # create_build_history(build_list)
 
 
 def create_build_history(build_list):
@@ -398,14 +416,8 @@ def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerele
     print "Upload completed!"
 
 
-def create_build_list(select_repo, all_repos_opt):
+def create_build_list(select_repo):
     """Create a list of repos to build depending on a menu that the user picks from."""
-    if all_repos_opt is True:
-        build_list = repo_info.REPO_LIST
-        print "Building repos: " + str(build_list)
-        print "\n"
-        return build_list
-
     # If the user has selcted the repos to build, the indexes are used to select
     # the repo names from the menu and they are appended to the build_list
     select_repo_list = select_repo.split(',')
@@ -441,9 +453,24 @@ def find_path_to_repos(starting_directory):
         starting_directory = os.path.realpath(starting_directory)
         return True
 
+def choose_tag(starting_directory, repo):
+    with build_utilities.pushd(os.path.join(starting_directory, repo)):
+        tags = list_remote_tags()
+        print "\n".join(tags)
+        while True:
+            tag_choice = raw_input("Enter the tag name:")
+            if tag_choice not in tags:
+                print "The tag {} does not exist for repo {}".format(tag_choice, repo)
+                print "Please choose a valid tag."
+                continue
+            else:
+                return ("tag", tag_choice)
+                break
 
-def choose_branch(repo_handle):
+
+def choose_branch(starting_directory, repo):
     """Choose a git branch or tag name to checkout and build."""
+    repo_handle = Repo(os.path.join(starting_directory, repo))
     branches = list_branches(repo_handle)
     while True:
         print "Available branches: ", branches
@@ -455,7 +482,7 @@ def choose_branch(repo_handle):
             continue
         else:
             break
-    return active_branch
+    return ("branch", active_branch)
 
 
 def choose_directory():
@@ -470,26 +497,21 @@ def choose_directory():
     return starting_directory
 
 
-def select_repos():
+def choose_repos():
     """Display a menu for a user to choose repos to be built.
 
     Use a raw_input statement to ask which repos should be built, then call
-    the create_build_list with all_repos_opt set to either True or False
+    the create_build_list.
     """
     print repo_info.REPO_MENU
     while True:
-        select_repo = raw_input("Which repositories will be built? (Hit [Enter] for all) ")
+        select_repo = raw_input("Which repository will be built? ")
         if not select_repo:
-            all_repo_q = raw_input("Do you want to build all repositories? (Y or YES) ")
-            if all_repo_q.lower() not in ["yes", "y", ""]:
-                print "Not a valid response."
-                continue
-            else:
-                build_list = create_build_list(select_repo, all_repos_opt=True)
-                break
+            print "Not a valid response."
+            continue
         else:
             try:
-                build_list = create_build_list(select_repo, all_repos_opt=False)
+                build_list = create_build_list(select_repo)
                 break
             except (ValueError, IndexError), error:
                 logger.error(error)
@@ -511,7 +533,8 @@ def check_java_compiler():
 
 
 @click.command()
-@click.option('--branch', '-b', default=None, help='Name of the git branch or tag to checkout and build')
+@click.option('--branch', '-b', default=None, help='Name of the git branch to checkout and build. Mutually exclusive with the --tag option.')
+@click.option('--tag', '-t', default=None, help='Name of the git tag to checkout and build. Mutually exclusive with the --branch option.')
 @click.option('--synctag', '-s', is_flag=True, help='Sync local and remote tags by pruning any tags out of sync on local')
 @click.option('--bump', '--bumpversion', default=None, type=click.Choice(['major', 'minor', 'patch']), help='Bump the version number according to the Semantic Versioning specification')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
@@ -519,14 +542,21 @@ def check_java_compiler():
 @click.option('--upload/--no-upload', is_flag=True, default=None, help="Upload built assets to GitHub")
 @click.option('--prerelease', '-p', is_flag=True, help="Tag release as prerelease")
 @click.option('--dryrun', '-r', is_flag=True, help="Perform a dry run of the release")
-@click.argument('repos', default=None, nargs=-1, type=click.Choice(['all', 'esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
-def main(branch, directory, repos, upload, prerelease, dryrun, name, bump, synctag):
+@click.argument('repos', default=None, nargs=1, type=click.Choice(['esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
+def main(branch, tag, directory, repos, upload, prerelease, dryrun, name, bump, synctag):
     """User prompted for build specifications and functions for build are called."""
     print "upload:", upload
     print "prerelease:", prerelease
     print "bump:", bump
+    print "directory:", directory
+    print "repos:", repos
 
-    check_java_compiler()
+    if repos:
+        build_list = repos
+    else:
+        build_list = choose_repos()
+
+    print "build_list:", build_list
 
     if not directory:
         starting_directory = choose_directory()
@@ -537,18 +567,34 @@ def main(branch, directory, repos, upload, prerelease, dryrun, name, bump, synct
             starting_directory = choose_directory()
 
     print "Using build directory {}".format(starting_directory)
-    if repos:
-        if "all" in repos:
-            build_list = repo_info.REPO_LIST
-        else:
-            build_list = repos
-    else:
-        build_list = select_repos()
+    update_all(starting_directory, build_list, bump, synctag)
 
-    print "build_list:", build_list
+    if branch and tag:
+        print("Specifying a branch and a tag is invalid.  You must choose a branch OR a tag to build from.")
+        sys.exit(1)
 
-    update_all(branch, starting_directory, build_list, bump, synctag)
-    build_all(build_list, starting_directory)
+    if not branch and not tag:
+        while True:
+            build_choice = raw_input("Do you want to build from a branch or a tag? ")
+            if build_choice.strip().lower() == "tag":
+                build_source = choose_tag(starting_directory, repos)
+                break
+            elif build_choice.strip().lower() == "branch":
+                build_source = choose_branch(starting_directory, repos)
+                break
+            else:
+                print("Invalid option.  Please enter either 'branch' or 'tag'.")
+
+    if branch:
+        build_source = branch
+    if tag:
+        build_source = tag
+
+    check_java_compiler()
+
+
+    # update_all(build_source, starting_directory, build_list, bump, synctag)
+    build_all(build_source, build_list, starting_directory)
     esgf_upload(starting_directory, build_list, name, upload, prerelease, dryrun)
 
 
