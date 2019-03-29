@@ -21,7 +21,7 @@ an conda environment file that can be used to create an ```esgf-build``` environ
 ### Building With Script:
 1. Run *esgf_build.py* by typing:
     ``` shell
-    python esgf_build.py [repo_1 repos_2 ...repo_n]
+    python esgf_build.py [repo_name]
     ```
   The esgf_build has command line arguments that can be passed to the script.
   ```shell
