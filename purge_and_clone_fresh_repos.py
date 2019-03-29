@@ -21,7 +21,7 @@ def purge_repos(repo_directory):
     for repo in repo_info.REPO_LIST:
         try:
             shutil.rmtree(os.path.join(repo_directory, repo))
-            print repo + " removed succesfully."
+            print repo + " removed successfully."
         except OSError:
             print repo + " does not exist on this system."
             print(repo + " skipped.")
@@ -29,17 +29,12 @@ def purge_repos(repo_directory):
 
 def clone_repos(repo_directory):
     '''Clone fresh ESGF repos that are listed in the repo_info file to the repo_directory'''
-    for repo_url in repo_info.ALL_REPO_URLS:
-        # In the future, if a module with more than 2 "-"s is created, this will
-        # need to be revised
-        # strips.git from the string to make using reg-ex easier
-        strip_repo = repo_url.replace(".git", "")
-        directory_name = re.search('esg\w*-\w+\W*\w+', strip_repo).group()
-        repo_path = os.path.join(repo_directory, directory_name)
-        print("Currently cloning repo: " + directory_name)
+    for repo_name, repo_url in repo_info.ALL_REPO_URLS.items():
+        repo_path = os.path.join(repo_directory, repo_name)
+        print("Currently cloning repo: " + repo_name)
         Repo.clone_from(repo_url, repo_path,
                         progress=MyProgressPrinter())
-        print(directory_name + " successfully cloned -> {repo_path}".format(repo_path=repo_path))
+        print(repo_name + " successfully cloned -> {repo_path}".format(repo_path=repo_path))
 
 
 def main(repo_directory=None):
