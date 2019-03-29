@@ -302,7 +302,11 @@ def esgf_upload(starting_directory, repo, name, upload_flag=False, prerelease_fl
     print "repo:", repo
     os.chdir(os.path.join(starting_directory, repo))
     repo_handle = Repo(os.getcwd())
-    print "active branch before upload:", repo_handle.active_branch
+    try:
+        print "active branch before upload:", repo_handle.active_branch
+    except TypeError, error:
+        logger.debug(error)
+        
     latest_tag = get_latest_tag(repo_handle)
     print "latest_tag:", latest_tag
 
