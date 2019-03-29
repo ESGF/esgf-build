@@ -121,10 +121,6 @@ def update_all(repo_directory, repo, bump, synctag):
     """Check each repo in the REPO_LIST for the most updated branch, and uses taglist to track versions."""
     print "Beginning to update directories."
 
-    commits_since_last_tag_file = open(os.path.join(
-        repo_directory, "commits_since_last_tag.txt"), "w")
-    taglist_file = open(os.path.join(repo_directory, "taglist.txt"), "w+")
-
     try:
         os.chdir(repo_directory + "/" + repo)
     except OSError:
@@ -138,9 +134,6 @@ def update_all(repo_directory, repo, bump, synctag):
     update_repo(repo, repo_handle, bump, synctag)
 
     os.chdir("..")
-
-    taglist_file.close()
-    commits_since_last_tag_file.close()
     print "Directory updates complete."
 
 
