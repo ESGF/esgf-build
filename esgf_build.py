@@ -1,11 +1,8 @@
 #!usr/bin/env python
 """Modules needed mostly to access terminal commands."""
-import subprocess
-import shlex
 import os
 import sys
 import logging
-import datetime
 from git import Repo
 import repo_info
 import build_utilities
@@ -93,29 +90,6 @@ def get_latest_tag(repo):
     return latest_tag
 
 
-def create_taglist_file(taglist_file, repo_name, latest_tag):
-    """Create a file containing the latest tag for each repo."""
-    taglist_file.write("-------------------------\n")
-    taglist_file.write(repo_name + "\n")
-    taglist_file.write("-------------------------\n")
-    taglist_file.write(latest_tag + "\n")
-    taglist_file.write("\n")
-
-
-def create_commits_since_last_tag_file(commits_since_last_tag_file, repo_name, latest_tag):
-    """Create a file with a list of commits that have been pushed since the last tag was cut."""
-    commits_since_tag = subprocess.check_output(shlex.split(
-        "git log {latest_tag}..HEAD".format(latest_tag=latest_tag)))
-    if commits_since_tag:
-        print "There are new commits since the last annotated tag for {repo_name}".format(repo_name=repo_name)
-        print "See commits_since_last_tag.txt for more details \n"
-        commits_since_last_tag_file.write("-------------------------\n")
-        commits_since_last_tag_file.write("Commits since last tag ({latest_tag}) for {repo_name}".format(
-            latest_tag=latest_tag, repo_name=repo_name) + "\n")
-        commits_since_last_tag_file.write("-------------------------\n")
-        commits_since_last_tag_file.write(commits_since_tag + "\n")
-
-
 def update_repo(repo_name, repo_object, bump, synctag):
     """Accept a GitPython Repo object and updates the specified branch."""
     update_tags(repo_object, synctag)
@@ -123,32 +97,6 @@ def update_repo(repo_name, repo_object, bump, synctag):
     progress_printer = ProgressPrinter()
     print "Pulling latest updates for {repo_name} from GitHub".format(repo_name=repo_name)
     repo_object.remotes.origin.fetch(progress=progress_printer)
-
-    # if active_branch == "latest":
-    #     active_tag = get_latest_tag(repo_object)
-    #     print "Checkout {repo_name}'s {active_tag} tag".format(repo_name=repo_name, active_tag=active_tag)
-    #     try:
-    #         build_utilities.call_binary("git", ["checkout", active_tag, "-b", active_tag])
-    #     except ProcessExecutionError, err:
-    #         if err.retcode == 128:
-    #             pass
-    # else:
-    #     print "Checkout {repo_name}'s {active_branch} branch".format(repo_name=repo_name, active_branch=active_branch)
-    #     repo_object.git.checkout(active_branch)
-    #
-    #     progress_printer = ProgressPrinter()
-    #     print "Pulling latest updates for {repo_name}'s {active_branch} branch from GitHub".format(repo_name=repo_name, active_branch=active_branch)
-    #     repo_object.remotes.origin.pull("{active_branch}:{active_branch}".format(
-    #         active_branch=active_branch), progress=progress_printer)
-    # print "Updating: " + repo_name
-
-    # latest_tag = get_latest_tag(repo_object)
-
-    # if bump:
-    #     new_tag = bump_tag_version(repo_name, latest_tag, bump)
-    #     latest_commit = repo_object.commit(active_branch)
-    #     new_tag_object = repo_object.create_tag(new_tag, ref=latest_commit, message='Updated {} version to tag "{}"'.format(bump, new_tag))
-    #     repo_object.remotes.origin.push(new_tag_object)
 
 
 def clone_repo(repo, repo_directory):
@@ -186,21 +134,8 @@ def update_all(repo_directory, repo, bump, synctag):
 
     repo_handle = Repo(os.getcwd())
 
-    # if not branch:
-    #     active_branch = choose_branch(repo_handle)
-    # elif branch == "latest":
-    #     active_branch = "latest"
-    # elif branch not in list_branches(repo_handle):
-    #     raise ValueError("{} branch was not found for {} repo".format(branch, repo))
-    # else:
-    #     active_branch = branch
-
     print "Updating {}".format(repo)
     update_repo(repo, repo_handle, bump, synctag)
-
-    # create_taglist_file(taglist_file, repo, latest_tag)
-    #
-    # create_commits_since_last_tag_file(commits_since_last_tag_file, repo, latest_tag)
 
     os.chdir("..")
 
@@ -208,12 +143,6 @@ def update_all(repo_directory, repo, bump, synctag):
     commits_since_last_tag_file.close()
     print "Directory updates complete."
 
-
-def get_most_recent_commit(repo_handle):
-    """Get the most recent commit w/ log and list comprehension."""
-    repo_handle.git.log()
-    mst_rcnt_cmmt = repo_handle.git.log().split("\ncommit")[0]
-    return mst_rcnt_cmmt
 
 ###########################################
 # Ant Utility Functions
@@ -287,8 +216,6 @@ def build_all(build_source, repo, starting_directory):
         print "No branch or tag was selected as the build source. Exiting."
         sys.exit(1)
 
-
-
     # repos getcert and stats-api do not need an ant pull call
     if repo == 'esgf-getcert':
         # clean and dist only
@@ -312,24 +239,6 @@ def build_all(build_source, repo, starting_directory):
     os.chdir("..")
 
     print "\nRepository builds complete."
-    # create_build_history(build_list)
-
-
-def create_build_history(build_list):
-    """Create a directory to keep a history of the build logs."""
-    # TODO: list clean, pull, and publish logs as well
-    build_history_file = open("buildlogs/build_history_{}.log".format(datetime.date.today()), "a")
-    build_history_file.write("Build Time: {}\n".format(str(datetime.datetime.now())))
-    build_history_file.write("-----------------------------------------------------\n")
-    for repo in build_list:
-        build_log = 'buildlogs/{}-build.log'.format(repo)
-        print "log_file:", build_log
-        for line in reversed(open(build_log).readlines()):
-            if "BUILD" in line:
-                build_history_file.write("{}: {}".format(repo, line.rstrip()))
-                build_history_file.write("\n")
-                break
-    build_history_file.close()
 
 
 def bump_tag_version(repo, current_version, selection=None):
@@ -464,6 +373,7 @@ def find_path_to_repos(starting_directory):
         os.makedirs(starting_directory)
         starting_directory = os.path.realpath(starting_directory)
         return True
+
 
 def choose_tag(starting_directory, repo):
     with build_utilities.pushd(os.path.join(starting_directory, repo)):
@@ -604,8 +514,6 @@ def main(branch, tag, directory, repos, upload, prerelease, dryrun, name, bump, 
 
     check_java_compiler()
 
-
-    # update_all(build_source, starting_directory, build_list, bump, synctag)
     build_all(build_source, build_list, starting_directory)
     esgf_upload(starting_directory, build_list, name, upload, prerelease, dryrun)
 
