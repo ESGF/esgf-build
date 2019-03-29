@@ -288,7 +288,7 @@ def is_prerelease(repo_name, tag):
     return release_info["prerelease"]
 
 
-def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerelease_flag=False, dryrun=False):
+def esgf_upload(starting_directory, repo, name, upload_flag=False, prerelease_flag=False, dryrun=False):
     """Upload binaries to GitHub release as assets."""
     if upload_flag is None:
         upload_flag = query_for_upload()
@@ -299,33 +299,31 @@ def esgf_upload(starting_directory, build_list, name, upload_flag=False, prerele
     if prerelease_flag:
         print "Marking as prerelease"
 
-    print "build list in upload:", build_list
-    for repo in build_list:
-        print "repo:", repo
-        os.chdir(os.path.join(starting_directory, repo))
-        repo_handle = Repo(os.getcwd())
-        print "active branch before upload:", repo_handle.active_branch
-        latest_tag = get_latest_tag(repo_handle)
-        print "latest_tag:", latest_tag
+    print "repo:", repo
+    os.chdir(os.path.join(starting_directory, repo))
+    repo_handle = Repo(os.getcwd())
+    print "active branch before upload:", repo_handle.active_branch
+    latest_tag = get_latest_tag(repo_handle)
+    print "latest_tag:", latest_tag
 
-        if not name:
-            release_name = latest_tag
-        else:
-            release_name = name
+    if not name:
+        release_name = latest_tag
+    else:
+        release_name = name
 
-        published_releases = get_published_releases("ESGF/{}".format(repo))
+    published_releases = get_published_releases("ESGF/{}".format(repo))
 
-        if latest_tag in published_releases:
-            if not prerelease_flag:
-                print "removing prerelease label"
-                gh_release_edit("ESGF/{}".format(repo), latest_tag, prerelease=False)
-                if is_prerelease("ESGF/{}".format(repo), latest_tag):
-                    raise RuntimeError("Prerelease flag not removed")
-            print "Updating the assets for the latest tag {}".format(latest_tag)
-            gh_asset_upload("ESGF/{}".format(repo), latest_tag, "{}/{}/dist/*".format(starting_directory, repo), dry_run=dryrun, verbose=False)
-        else:
-            print "Creating release version {} for {}".format(latest_tag, repo)
-            gh_release_create("ESGF/{}".format(repo), "{}".format(latest_tag), publish=True, name=release_name, prerelease=prerelease_flag, dry_run=dryrun, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
+    if latest_tag in published_releases:
+        if not prerelease_flag:
+            print "removing prerelease label"
+            gh_release_edit("ESGF/{}".format(repo), latest_tag, prerelease=False)
+            if is_prerelease("ESGF/{}".format(repo), latest_tag):
+                raise RuntimeError("Prerelease flag not removed")
+        print "Updating the assets for the latest tag {}".format(latest_tag)
+        gh_asset_upload("ESGF/{}".format(repo), latest_tag, "{}/{}/dist/*".format(starting_directory, repo), dry_run=dryrun, verbose=False)
+    else:
+        print "Creating release version {} for {}".format(latest_tag, repo)
+        gh_release_create("ESGF/{}".format(repo), "{}".format(latest_tag), publish=True, name=release_name, prerelease=prerelease_flag, dry_run=dryrun, asset_pattern="{}/{}/dist/*".format(starting_directory, repo))
 
     print "Upload completed!"
 
