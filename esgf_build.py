@@ -264,16 +264,28 @@ def build_all(build_source, repo, starting_directory):
     if build_source[0] == "tag":
         print "Building from tag {}".format(build_source[1])
         try:
-            build_utilities.call_binary("git", ["checkout", "tags/{}".format(build_source[1]), "-b", build_source[1]])
+            build_utilities.call_binary("git", ["checkout", "tags/{}".format(build_source[1])])
         except ProcessExecutionError, error:
-            print "error:", error
+            logger.error(error)
+            logger.error("No tag with name %s found. Exiting", build_source[1])
 
         print "sanity check:", build_utilities.call_binary("git", ["describe"])
     elif build_source[0] == "branch":
         print "Building from branch {}".format(build_source[1])
-        build_utilities.call_binary("git", ["checkout", build_source[1]])
-        build_utilities.call_binary("git", ["pull"])
-        print "sanity check branch:", build_utilities.call_binary("git", ["rev-parse", "--abbrev-ref", "HEAD"])
+        try:
+            build_utilities.call_binary("git", ["checkout", build_source[1]])
+        except ProcessExecutionError, error:
+            logger.error(error)
+            if error.retcode == 1:
+                logger.error("No branch with name %s found. Exiting", build_source[1])
+            sys.exit(1)
+        else:
+            build_utilities.call_binary("git", ["pull"])
+            print "sanity check branch:", build_utilities.call_binary("git", ["rev-parse", "--abbrev-ref", "HEAD"])
+
+    else:
+        print "No branch or tag was selected as the build source. Exiting."
+        sys.exit(1)
 
 
 
@@ -586,9 +598,9 @@ def main(branch, tag, directory, repos, upload, prerelease, dryrun, name, bump, 
                 print("Invalid option.  Please enter either 'branch' or 'tag'.")
 
     if branch:
-        build_source = branch
+        build_source = ("branch", branch)
     if tag:
-        build_source = tag
+        build_source = ("tag", tag)
 
     check_java_compiler()
 
