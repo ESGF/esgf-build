@@ -70,13 +70,13 @@ def get_md5sum(file_name):
     return file_name_md5
 
 
-def mkdir_p(path, mode=0777):
+def mkdir_p(path, mode=0o777):
     """Make directory, passes if directory already exists."""
     try:
         os.makedirs(path, mode)
     except OSError as exc:  # Python >2.5
         if exc.errno == errno.EEXIST and os.path.isdir(path):
-            print "{path} already exists".format(path=path)
+            print("{path} already exists".format(path=path))
         else:
             raise
 
@@ -87,9 +87,9 @@ def pushd(new_dir):
 
     Usage:
     with pushd(some_dir):
-        print os.getcwd() # "some_dir"
+        print(os.getcwd() # "some_dir")
         some_actions
-    print os.getcwd() # "starting_directory"
+    print(os.getcwd() # "starting_directory")
     """
     previous_dir = os.getcwd()
     os.chdir(new_dir)
