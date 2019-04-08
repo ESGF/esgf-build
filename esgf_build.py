@@ -57,25 +57,20 @@ def list_local_tags(repo):
     return local_tags
 
 
-def update_tags(repo, synctag):
+def update_tags(repo):
     """Update tags on the repo."""
-    if synctag:
-        # Fetch latest tags from GitHub
-        build_utilities.call_binary("git", ["fetch", "--prune", "--prune-tags", "origin"])
-        return
-    else:
-        build_utilities.call_binary("git", ["fetch", "--tags"])
-        remote_tags = set(list_remote_tags())
-        local_tags = set(list_local_tags(repo))
+    build_utilities.call_binary("git", ["fetch", "--tags"])
+    remote_tags = set(list_remote_tags())
+    local_tags = set(list_local_tags(repo))
 
-        local_only_tags = local_tags.difference(remote_tags)
+    local_only_tags = local_tags.difference(remote_tags)
 
-        if local_only_tags:
-            print "The following tags only exist locally and are not in sync with remote: {}".format(", ".join(local_only_tags))
-            delete_local_tags = raw_input("Would you like to delete them? [Y/n]: ") or "yes"
-            if delete_local_tags.lower() in ["y", "yes"]:
-                for tag in local_only_tags:
-                    build_utilities.call_binary("git", ["tag", "-d", tag])
+    if local_only_tags:
+        print "The following tags only exist locally and are not in sync with remote: {}".format(", ".join(local_only_tags))
+        delete_local_tags = raw_input("Would you like to delete them? [Y/n]: ") or "yes"
+        if delete_local_tags.lower() in ["y", "yes"]:
+            for tag in local_only_tags:
+                build_utilities.call_binary("git", ["tag", "-d", tag])
 
 
 def get_latest_tag(repo):
@@ -90,9 +85,9 @@ def get_latest_tag(repo):
     return latest_tag
 
 
-def update_repo(repo_name, repo_object, bump, synctag):
+def update_repo(repo_name, repo_object, bump):
     """Accept a GitPython Repo object and updates the specified branch."""
-    update_tags(repo_object, synctag)
+    update_tags(repo_object)
 
     progress_printer = ProgressPrinter()
     print "Pulling latest updates for {repo_name} from GitHub".format(repo_name=repo_name)
@@ -117,7 +112,7 @@ def list_branches(repo_handle):
     return all_branches
 
 
-def update_all(repo_directory, repo, bump, synctag):
+def update_all(repo_directory, repo, bump):
     """Check each repo in the REPO_LIST for the most updated branch, and uses taglist to track versions."""
     print "Beginning to update directories."
 
@@ -131,7 +126,7 @@ def update_all(repo_directory, repo, bump, synctag):
     repo_handle = Repo(os.getcwd())
 
     print "Updating {}".format(repo)
-    update_repo(repo, repo_handle, bump, synctag)
+    update_repo(repo, repo_handle, bump)
 
     os.chdir("..")
     print "Directory updates complete."
@@ -306,7 +301,7 @@ def esgf_upload(starting_directory, repo, name, upload_flag=False, prerelease_fl
         print "active branch before upload:", repo_handle.active_branch
     except TypeError, error:
         logger.debug(error)
-        
+
     latest_tag = get_latest_tag(repo_handle)
     print "latest_tag:", latest_tag
 
@@ -452,7 +447,6 @@ def check_java_compiler():
 @click.command()
 @click.option('--branch', '-b', default=None, help='Name of the git branch to checkout and build. Mutually exclusive with the --tag option.')
 @click.option('--tag', '-t', default=None, help='Name of the git tag to checkout and build. Mutually exclusive with the --branch option.')
-@click.option('--synctag', '-s', is_flag=True, help='Sync local and remote tags by pruning any tags out of sync on local')
 @click.option('--bump', '--bumpversion', default=None, type=click.Choice(['major', 'minor', 'patch']), help='Bump the version number according to the Semantic Versioning specification')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
 @click.option('--name', '-n', default=None, help="Name of the release")
@@ -460,7 +454,7 @@ def check_java_compiler():
 @click.option('--prerelease', '-p', is_flag=True, help="Tag release as prerelease")
 @click.option('--dryrun', '-r', is_flag=True, help="Perform a dry run of the release")
 @click.argument('repos', default=None, nargs=1, type=click.Choice(['esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
-def main(branch, tag, directory, repos, upload, prerelease, dryrun, name, bump, synctag):
+def main(branch, tag, directory, repos, upload, prerelease, dryrun, name, bump):
     """User prompted for build specifications and functions for build are called."""
     print "upload:", upload
     print "prerelease:", prerelease
@@ -484,7 +478,7 @@ def main(branch, tag, directory, repos, upload, prerelease, dryrun, name, bump, 
             starting_directory = choose_directory()
 
     print "Using build directory {}".format(starting_directory)
-    update_all(starting_directory, build_list, bump, synctag)
+    update_all(starting_directory, build_list, bump)
 
     if branch and tag:
         print("Specifying a branch and a tag is invalid.  You must choose a branch OR a tag to build from.")
