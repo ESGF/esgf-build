@@ -85,7 +85,7 @@ def get_latest_tag(repo):
     return latest_tag
 
 
-def update_repo(repo_name, repo_object, bump):
+def update_repo(repo_name, repo_object):
     """Accept a GitPython Repo object and updates the specified branch."""
     update_tags(repo_object)
 
@@ -112,7 +112,7 @@ def list_branches(repo_handle):
     return all_branches
 
 
-def update_all(repo_directory, repo, bump):
+def update_all(repo_directory, repo):
     """Check each repo in the REPO_LIST for the most updated branch, and uses taglist to track versions."""
     print "Beginning to update directories."
 
@@ -126,7 +126,7 @@ def update_all(repo_directory, repo, bump):
     repo_handle = Repo(os.getcwd())
 
     print "Updating {}".format(repo)
-    update_repo(repo, repo_handle, bump)
+    update_repo(repo, repo_handle)
 
     os.chdir("..")
     print "Directory updates complete."
@@ -227,30 +227,6 @@ def build_all(build_source, repo, starting_directory):
     os.chdir("..")
 
     print "\nRepository builds complete."
-
-
-def bump_tag_version(repo, current_version, selection=None):
-    """Bump the tag version using semantic versioning."""
-    current_version = current_version.replace("v", "")
-    while True:
-        if not selection:
-            print '----------------------------------------\n'
-            print '0: Bump major version {} -> {} \n'.format(current_version, semver.bump_major(current_version))
-            print '1: Bump minor version {} -> {} \n'.format(current_version, semver.bump_minor(current_version))
-            print '2: Bump patch version {} -> {} \n'.format(current_version, semver.bump_patch(current_version))
-            selection = raw_input("Choose version number component to increment: ")
-        if selection == "0" or selection == "major":
-            return "v" + semver.bump_major(current_version)
-            break
-        elif selection == "1" or selection == "minor":
-            return "v" + semver.bump_minor(current_version)
-            break
-        elif selection == "2" or selection == "patch":
-            return "v" + semver.bump_patch(current_version)
-            break
-        else:
-            print "Invalid selection. Please make a valid selection."
-            selection = None
 
 
 def query_for_upload():
@@ -447,18 +423,16 @@ def check_java_compiler():
 @click.command()
 @click.option('--branch', '-b', default=None, help='Name of the git branch to checkout and build. Mutually exclusive with the --tag option.')
 @click.option('--tag', '-t', default=None, help='Name of the git tag to checkout and build. Mutually exclusive with the --branch option.')
-@click.option('--bump', '--bumpversion', default=None, type=click.Choice(['major', 'minor', 'patch']), help='Bump the version number according to the Semantic Versioning specification')
 @click.option('--directory', '-d', default=None, help="Directory where the ESGF repos are located on your system")
 @click.option('--name', '-n', default=None, help="Name of the release")
 @click.option('--upload/--no-upload', is_flag=True, default=None, help="Upload built assets to GitHub")
 @click.option('--prerelease', '-p', is_flag=True, help="Tag release as prerelease")
 @click.option('--dryrun', '-r', is_flag=True, help="Perform a dry run of the release")
 @click.argument('repos', default=None, nargs=1, type=click.Choice(['esgf-dashboard', 'esgf-getcert', 'esgf-idp', 'esgf-node-manager', 'esgf-security', 'esg-orp', 'esg-search', 'esgf-stats-api']))
-def main(branch, tag, directory, repos, upload, prerelease, dryrun, name, bump):
+def main(branch, tag, directory, repos, upload, prerelease, dryrun, name):
     """User prompted for build specifications and functions for build are called."""
     print "upload:", upload
     print "prerelease:", prerelease
-    print "bump:", bump
     print "directory:", directory
     print "repos:", repos
 
@@ -478,7 +452,7 @@ def main(branch, tag, directory, repos, upload, prerelease, dryrun, name, bump):
             starting_directory = choose_directory()
 
     print "Using build directory {}".format(starting_directory)
-    update_all(starting_directory, build_list, bump)
+    update_all(starting_directory, build_list)
 
     if branch and tag:
         print("Specifying a branch and a tag is invalid.  You must choose a branch OR a tag to build from.")
