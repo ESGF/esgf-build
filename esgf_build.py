@@ -179,9 +179,14 @@ def build_all(build_source, repo, starting_directory):
     os.chdir(starting_directory + "/" + repo)
     logger.info(os.getcwd())
     if build_source[0] == "tag":
+        try:
+            # delete existing tag branch if it exists
+            build_utilities.call_binary("git", ["branch", "-D", build_source[1]])
+        except ProcessExecutionError:
+            pass
         print "Building from tag {}".format(build_source[1])
         try:
-            build_utilities.call_binary("git", ["checkout", "tags/{}".format(build_source[1])])
+            build_utilities.call_binary("git", ["checkout", "tags/{}".format(build_source[1]), "-b", build_source[1]])
         except ProcessExecutionError, error:
             logger.error(error)
             logger.error("No tag with name %s found. Exiting", build_source[1])
