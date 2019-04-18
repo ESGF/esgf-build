@@ -71,6 +71,8 @@ def update_tags(repo):
         if delete_local_tags.lower() in ["y", "yes"]:
             for tag in local_only_tags:
                 build_utilities.call_binary("git", ["tag", "-d", tag])
+    else:
+        return True
 
 
 def get_latest_tag(repo):
@@ -87,11 +89,11 @@ def get_latest_tag(repo):
 
 def update_repo(repo_name, repo_object):
     """Accept a GitPython Repo object and updates the specified branch."""
-    update_tags(repo_object)
-
     progress_printer = ProgressPrinter()
     print "Pulling latest updates for {repo_name} from GitHub".format(repo_name=repo_name)
     repo_object.remotes.origin.fetch(progress=progress_printer)
+
+    update_tags(repo_object)
 
 
 def clone_repo(repo, repo_directory):
@@ -378,11 +380,13 @@ def choose_branch(starting_directory, repo):
     return ("branch", active_branch)
 
 
-def choose_directory():
+def choose_directory(directory=None):
     """Choose the absolute path where the ESGF repos are located on your system.
 
     If the repos do not currently exist in the given directory, they will be cloned into the directory.
     """
+    if directory and find_path_to_repos(directory):
+        return directory
     while True:
         starting_directory = raw_input("Please provide the path to the repositories on your system: ").strip()
         if find_path_to_repos(starting_directory):
@@ -448,13 +452,7 @@ def main(branch, tag, directory, repos, upload, prerelease, dryrun, name):
 
     print "build_list:", build_list
 
-    if not directory:
-        starting_directory = choose_directory()
-    else:
-        if find_path_to_repos(directory):
-            starting_directory = directory
-        else:
-            starting_directory = choose_directory()
+    starting_directory = choose_directory(directory)
 
     print "Using build directory {}".format(starting_directory)
     update_all(starting_directory, build_list)
