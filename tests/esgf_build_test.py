@@ -17,8 +17,8 @@ def setup_test_env(request):
     # prepare something ahead of all tests
     build_utilities.mkdir_p("/tmp/esgf_repos")
     with build_utilities.pushd("/tmp/esgf_repos/"):
-        print "Cloning esg-orp"
-        build_utilities.call_binary("git", ["clone", "https://github.com/ESGF/esg-orp.git"])
+        print "Cloning esgf-security"
+        build_utilities.call_binary("git", ["clone", "https://github.com/ESGF/esgf-security.git"])
     # purge_and_clone_fresh_repos.main(os.path.join("tmp", "esgf_repos"))
     request.addfinalizer(finalizer_function)
 
@@ -28,7 +28,7 @@ def test_choose_directory():
 
 
 def test_get_latest_tag():
-    with build_utilities.pushd("/tmp/esgf_repos/esg-orp"):
+    with build_utilities.pushd("/tmp/esgf_repos/esgf-security"):
         repo = Repo(os.getcwd())
         git_describe_output = build_utilities.call_binary("git", ["describe"])
         latest_tag = esgf_build.get_latest_tag(repo)
@@ -36,13 +36,23 @@ def test_get_latest_tag():
 
 
 def test_list_remote_tags():
-    with build_utilities.pushd("/tmp/esgf_repos/esg-orp"):
+    with build_utilities.pushd("/tmp/esgf_repos/esgf-security"):
         assert esgf_build.list_remote_tags() is not []
 
 
 def test_list_local_tags():
-    with build_utilities.pushd("/tmp/esgf_repos/esg-orp"):
+    with build_utilities.pushd("/tmp/esgf_repos/esgf-security"):
         repo = Repo(os.getcwd())
         assert esgf_build.list_local_tags(repo) is not []
 
+
 def test_update_tags():
+    with build_utilities.pushd("/tmp/esgf_repos/esgf-security"):
+        repo = Repo(os.getcwd())
+        git_describe_output = build_utilities.call_binary("git", ["describe"])
+        remote_tags = esgf_build.list_remote_tags()
+        print "remote_tags:", remote_tags
+        print "git_describe_output:", git_describe_output
+        # print "git describe:", build_utilities.call_binary("git", ["des])
+        assert esgf_build.update_tags(repo) is True
+        assert remote_tags[0].strip() == git_describe_output.strip()
