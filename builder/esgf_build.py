@@ -54,6 +54,7 @@ def list_local_tags(repo):
         else:
             tag_list.append(bar)
     local_tags = [str(tag) for tag in sorted(tag_list, key=lambda t: t.commit.committed_datetime)]
+    print "local_tags:", local_tags
     return local_tags
 
 
