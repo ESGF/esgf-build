@@ -21,6 +21,7 @@ an conda environment file that can be used to create an ```esgf-build``` environ
 ### Building With Script:
 1. Run *esgf_build.py* by typing:
     ``` shell
+    cd builder
     python esgf_build.py [repo_name]
     ```
   The esgf_build has command line arguments that can be passed to the script.
@@ -31,29 +32,30 @@ an conda environment file that can be used to create an ```esgf-build``` environ
     Choose which branch you will checkout and build. Mutually exclusive with the --tag option.
   --tag tag_name
     Choose which tag you will checkout and build. Mutually exclusive with the --branch option.
-  --bump version_component
-    Bump the version number according to the Semantic Versioning specification. Valid options are 'major', 'minor', or 'patch'. Leaves version unchanged if option is omitted.
   --name release_name
     Enter a name for the release.  The release will default to tag number as the name if this option is omitted.
   --prerelease
     Boolean flag for tagging the release a nonproduction. Defaults to False if omitted
   --dryrun
     Boolean flag for performing a dry run of the release. Defaults to False if omitted
-  --synctag
-    Boolean flag for performing deleting local tags that are not in sync with the remote repo. Defaults to False if omitted
   --upload/--no-upload
     Boolean flag to choose whether to upload built assets to GitHub.
 ```
  If any of the command line options are not passed to the script invocation, then the script will prompt for the user input.
 
 2. Enter a title for the release when prompted.  
-3. Enter 'yes' or 'no' when prompted to bump the version number.  You will be able to bump the version number according to the [Semantic Versioning](https://semver.org/) guidelines.
 
 The script will then upload the binaries to the respective GitHub repositories.
 
 ## Versioning
 
 We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/ESGF/esgf-build/tags).
+
+# Testing
+
+Unit tests are written using [pytest](https://docs.pytest.org/en/latest/).  The tests can be run from the top level directory using pytest's discovery feature by entering the following command:
+
+```pytest -s```
 
 ## License
 
