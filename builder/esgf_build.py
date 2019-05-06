@@ -155,12 +155,17 @@ def pull(repo, log_directory, pull_command="pull"):
         pull_log_file.write(pull_output)
 
 
-def build(repo, log_directory, build_command="make_dist"):
+def build(repo, log_directory, build_command="make_dist", build_source=None):
     """Run the build directive from a repo's build script."""
     build_log = os.path.join(log_directory, repo + "-build.log")
 
     with open(build_log, "w") as build_log_file:
-        build_output = build_utilities.call_binary("ant", [build_command])
+        if build_source[0] == "tag":
+            version_num = build_source[1][1:]
+            print "version_num:", version_num
+            build_output = build_utilities.call_binary("ant", ["-Dversion_num={}".format(version_num), build_command])
+        else:
+            build_output = build_utilities.call_binary("ant", [build_command])
         build_log_file.write(build_output)
 
 
@@ -194,7 +199,7 @@ def build_all(build_source, repo, starting_directory):
             logger.error(error)
             logger.error("No tag with name %s found. Exiting", build_source[1])
 
-        print "sanity check:", build_utilities.call_binary("git", ["describe"])
+        print "sanity check tag:", build_utilities.call_binary("git", ["describe"])
     elif build_source[0] == "branch":
         print "Building from branch {}".format(build_source[1])
         try:
@@ -216,21 +221,21 @@ def build_all(build_source, repo, starting_directory):
     if repo == 'esgf-getcert':
         # clean and dist only
         clean(repo, log_directory, clean_command="clean")
-        build(repo, log_directory, build_command="dist")
+        build(repo, log_directory, build_command="dist", build_source=build_source)
         os.chdir("..")
         # continue
 
     elif repo == 'esgf-stats-api':
         # clean and make_dist only
         clean(repo, log_directory)
-        build(repo, log_directory)
+        build(repo, log_directory, build_source=build_source)
         os.chdir('..')
         # continue
     else:
         # clean, build, and make_dist, publish to local repo
         clean(repo, log_directory)
         pull(repo, log_directory)
-        build(repo, log_directory)
+        build(repo, log_directory, build_source=build_source)
         publish_local(repo, log_directory)
     os.chdir("..")
 
