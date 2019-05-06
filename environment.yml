@@ -29,6 +29,5 @@ dependencies:
   - zlib=1.2.11=h1de35cc_1004
   - python=2.7.15=h8f8e585_6
   - pip:
-    - githubrelease
-    - pytest
-prefix: /Users/hill119/anaconda2/envs/esgf-build
+      - githubrelease
+      - pytest
