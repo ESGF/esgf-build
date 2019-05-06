@@ -18,22 +18,22 @@ def setup_test_env(request):
     # prepare something ahead of all tests
     build_utilities.mkdir_p("/tmp/esgf_repos")
     with build_utilities.pushd("/tmp/esgf_repos/"):
-        print "Cloning esg-orp"
         for repo in repo_info.ALL_REPO_URLS.values():
             build_utilities.call_binary("git", ["clone", repo])
-    # purge_and_clone_fresh_repos.main(os.path.join("tmp", "esgf_repos"))
     request.addfinalizer(finalizer_function)
 
 
 def test_choose_directory():
-    assert esgf_build.choose_directory("/Users/hill119/Development") == "/Users/hill119/Development"
+    build_utilities.mkdir_p("/tmp/esgf_repos")
+    assert esgf_build.choose_directory("/tmp/esgf_repos") == "/tmp/esgf_repos"
 
 
 def test_get_latest_tag():
     for repo in repo_info.ALL_REPO_URLS:
         with build_utilities.pushd(os.path.join("/tmp", "esgf_repos", repo)):
             repo = Repo(os.getcwd())
-            git_describe_output = build_utilities.call_binary("git", ["describe"])
+            latest_commit = build_utilities.call_binary("git", ["rev-list", "--tags", "--max-count=1"]).strip()
+            git_describe_output = build_utilities.call_binary("git", ["describe", "--tags", latest_commit])
             print 'git_describe_output for annotated tag:', git_describe_output
             latest_tag = esgf_build.get_latest_tag(repo)
             print "latest_tag:", latest_tag
@@ -55,11 +55,11 @@ def test_list_local_tags():
 def test_update_tags():
     with build_utilities.pushd("/tmp/esgf_repos/esg-orp"):
         repo = Repo(os.getcwd())
-        git_describe_output = build_utilities.call_binary("git", ["describe"])
+        latest_commit = build_utilities.call_binary("git", ["rev-list", "--tags", "--max-count=1"]).strip()
+        git_describe_output = build_utilities.call_binary("git", ["describe", "--tags", latest_commit])
         remote_tags = esgf_build.list_remote_tags()
         print "remote_tags:", remote_tags
         print "git_describe_output:", git_describe_output
-        # print "git describe:", build_utilities.call_binary("git", ["des])
         assert esgf_build.update_tags(repo) is True
         assert remote_tags[0].strip() == git_describe_output.strip().split("-", 1)[0]
 
