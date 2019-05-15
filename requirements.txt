@@ -12,3 +12,4 @@ plumbum
 githubrelease
 semver
 click
+pytest
