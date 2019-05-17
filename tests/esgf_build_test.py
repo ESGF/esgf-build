@@ -31,12 +31,15 @@ def test_choose_directory():
 def test_get_latest_tag():
     for repo in repo_info.ALL_REPO_URLS:
         with build_utilities.pushd(os.path.join("/tmp", "esgf_repos", repo)):
+            print "========================================"
+            print "Testing get_latest_tag for {}".format(repo)
+            print "========================================"
             repo = Repo(os.getcwd())
             latest_commit = build_utilities.call_binary("git", ["rev-list", "--tags", "--max-count=1"]).strip()
             git_describe_output = build_utilities.call_binary("git", ["describe", "--tags", latest_commit])
-            print 'git_describe_output for annotated tag:', git_describe_output
+            print 'git_describe_output for annotated tag for {}: {}'.format(repo, git_describe_output)
             latest_tag = esgf_build.get_latest_tag(repo)
-            print "latest_tag:", latest_tag
+            print "latest_tag for {}: {}".format(repo, latest_tag)
             assert latest_tag.strip() == git_describe_output.strip().split("-", 1)[0]
 
 
